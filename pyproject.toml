@@ -1,0 +1,14 @@
+[project]
+name = "mailscan"
+version = "0.1.0"
+description = "Home mail scanner: Gmail → local LLM (Ollama) → importance and summary → Telegram"
+requires-python = ">=3.10"
+# Standard library only: no third-party packages in the image
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
