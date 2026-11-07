@@ -49,7 +49,7 @@ def load_settings(env=None):
     env = os.environ if env is None else env
     get = lambda name, default="": (env.get(name) or default).strip()  # noqa: E731
     try:
-        interval = int(get("SCAN_INTERVAL_MIN", "10"))
+        interval = int(get("SCAN_INTERVAL_MIN", "1"))
     except ValueError as e:
         raise ConfigError(f"SCAN_INTERVAL_MIN: expected a number of minutes, got '{get('SCAN_INTERVAL_MIN')}'") from e
     if interval < 1:

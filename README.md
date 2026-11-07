@@ -10,7 +10,7 @@ The summaries are in Russian by default; change the language with `SUMMARY_LANGU
 
 - **`ollama`**: the model. No port is published; only the scanner can reach it inside the compose network.
 - **`ollama-pull`**: one-shot. On the first start it downloads the model (6.6 GB) and does nothing after that.
-- **`mailscan`**: the scanner with its own schedule: it checks the mail every 10 minutes.
+- **`mailscan`**: the scanner with its own schedule: it checks the mail every minute (`SCAN_INTERVAL_MIN`).
 
 The mailbox is opened read-only: emails are not marked as read, moved or deleted. Only the inbox (`INBOX`) is scanned; the archive and other Gmail labels are not read.
 

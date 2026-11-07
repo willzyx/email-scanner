@@ -160,8 +160,8 @@ def test_tick_scans_when_due(db):
     box, tg = FakeBox({1: eml(1)}), FakeTG()
     next_at = tick(SETTINGS, db, FakeLLM({"Letter 1": "high"}), tg, lambda: box, at(9), at(9))
     assert len(tg.sent) == 1 and "Letter 1" in tg.sent[0]
-    assert next_at == at(9, 10)
-    assert tick(SETTINGS, db, FakeLLM(), tg, lambda: box, at(9, 5), next_at) == next_at  # not due yet
+    assert next_at == at(9, 1)
+    assert tick(SETTINGS, db, FakeLLM(), tg, lambda: box, at(9, 0, 30), next_at) == next_at  # not due yet
     assert len(tg.sent) == 1
 
 
