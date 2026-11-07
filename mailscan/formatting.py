@@ -14,9 +14,12 @@ def _e(text, limit=None):
     return escape(text, quote=False)
 
 
+HEADERS = {"high": "🔴 <b>Important email</b>", "medium": "🟡 <b>Email</b>"}
+
+
 def format_important(mail, analysis):
     lines = [
-        "🔴 <b>Important email</b>",
+        HEADERS.get(analysis.importance, HEADERS["medium"]),
         f"<b>From:</b> {_e(mail.sender, SENDER_MAX)}",
         f"<b>Subject:</b> {_e(mail.subject, SUBJECT_MAX)}",
         "",

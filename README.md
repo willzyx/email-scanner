@@ -1,6 +1,6 @@
 # mailscan
 
-Reads a personal Gmail inbox; a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important emails go to Telegram right away; everything else is rated and skipped, nothing is sent for it. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
+Reads a personal Gmail inbox; a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away; ads, newsletters and notifications are rated and skipped, nothing is sent for them. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
 
 The summaries are in Russian by default; change the language with `SUMMARY_LANGUAGE`.
 

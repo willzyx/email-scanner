@@ -15,6 +15,9 @@ from .telegram import TelegramError
 
 log = logging.getLogger("mailscan")
 
+# Importance levels that go to Telegram; low (ads, newsletters, notifications) is only logged
+NOTIFY = ("high", "medium")
+
 
 class Busy(Exception):
     """Another scan is in progress (e.g. a manual command next to the run loop)."""
@@ -65,7 +68,7 @@ def scan(settings, db, llm, tg, open_mailbox, today=None):
                 if mail is not None:
                     analysis = llm.analyze(mail)
                     log.info("UID %d: %s", uid, analysis.importance)
-                    if analysis.importance == "high":
+                    if analysis.importance in NOTIFY:
                         tg.send(format_important(mail, analysis))
                         log.info("UID %d: sent to Telegram", uid)
             db.advance(folder, box.uidvalidity, uid)

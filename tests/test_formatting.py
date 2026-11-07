@@ -21,6 +21,10 @@ def test_important_escapes_html():
     assert "⚡ Action required · Why: Reason" in text
 
 
+def test_medium_has_its_own_header():
+    assert format_important(mail(), analysis(importance="medium")).startswith("🟡 <b>Email</b>")
+
+
 def test_important_without_name_reason_and_action():
     text = format_important(mail(from_name=""), analysis(reason="", action_required=False))
     assert "<b>From:</b> a@b.example" in text

@@ -75,14 +75,16 @@ def db(tmp_path):
         yield storage
 
 
-def test_first_scan_sends_high_and_skips_the_rest(db):
-    box, llm, tg = FakeBox({1: eml(1), 2: eml(2)}), FakeLLM({"Letter 1": "high"}), FakeTG()
+def test_first_scan_sends_high_and_medium_and_skips_low(db):
+    box = FakeBox({1: eml(1), 2: eml(2), 3: eml(3)})
+    llm, tg = FakeLLM({"Letter 1": "high", "Letter 3": "medium"}), FakeTG()
     assert scan(SETTINGS, db, llm, tg, lambda: box) is False
-    assert len(tg.sent) == 1 and "Letter 1" in tg.sent[0]
-    assert db.cursor("INBOX") == (1, 2)
+    assert len(tg.sent) == 2 and "🔴" in tg.sent[0] and "Letter 1" in tg.sent[0]
+    assert "🟡" in tg.sent[1] and "Letter 3" in tg.sent[1]
+    assert db.cursor("INBOX") == (1, 3)
 
     assert scan(SETTINGS, db, llm, tg, lambda: box) is False  # a second pass changes nothing
-    assert llm.seen == ["Letter 1", "Letter 2"] and len(tg.sent) == 1
+    assert llm.seen == ["Letter 1", "Letter 2", "Letter 3"] and len(tg.sent) == 2
 
 
 def test_ollama_down_keeps_cursor_on_last_processed(db):
