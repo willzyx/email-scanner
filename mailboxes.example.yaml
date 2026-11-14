@@ -1,0 +1,20 @@
+# Copy to mailboxes.yaml and fill in: one entry per mailbox to scan.
+# The file holds passwords. On the server give it to the user the scanner runs as, and to nobody else:
+#   sudo chown 10001 mailboxes.yaml && sudo chmod 400 mailboxes.yaml
+
+mailboxes:
+  # Gmail address and an app password (not the regular password!):
+  # https://myaccount.google.com/apppasswords — requires 2-Step Verification
+  - user: you@gmail.com
+    # In single quotes: without them YAML reads characters such as # : & ! * in its own way.
+    # A single quote inside the password is written twice.
+    password: 'aaaa bbbb cccc dddd'
+    # The Telegram chat the emails of this mailbox are reported to (the README tells how to find the id out)
+    chat_id: 123456789
+
+  # A mailbox on another mail server, reporting to a group
+  - user: you@example.org
+    password: 'password'
+    chat_id: -1001234567890
+    # imap.gmail.com when left out
+    host: imap.example.org

@@ -1,4 +1,5 @@
 .env
+mailboxes.yaml
 data/
 .idea/
 *.iml

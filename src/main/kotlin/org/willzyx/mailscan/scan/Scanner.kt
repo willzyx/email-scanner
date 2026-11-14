@@ -1,23 +1,16 @@
 package org.willzyx.mailscan.scan
 
 import java.time.Clock
-import java.time.Duration
 import java.time.LocalDate
-import kotlin.time.toKotlinDuration
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import org.willzyx.mailscan.db.Cursor
 import org.willzyx.mailscan.db.CursorRepository
 import org.willzyx.mailscan.imap.Mailbox
-import org.willzyx.mailscan.imap.MailboxException
 import org.willzyx.mailscan.imap.MailboxSession
 import org.willzyx.mailscan.llm.EmailAnalyzer
 import org.willzyx.mailscan.llm.Importance
-import org.willzyx.mailscan.llm.LlmUnavailableException
 import org.willzyx.mailscan.mail.parseEmail
 import org.willzyx.mailscan.telegram.TelegramClient
-import org.willzyx.mailscan.telegram.TelegramException
 import org.willzyx.mailscan.telegram.emailText
 
 /**
@@ -26,38 +19,13 @@ import org.willzyx.mailscan.telegram.emailText
  * [clock] tells what day it is, in the user's time zone.
  */
 class Scanner(
-    private val account: String,
+    val account: String,
     private val mailbox: Mailbox,
     private val cursors: CursorRepository,
     private val analyzer: EmailAnalyzer,
     private val telegram: TelegramClient,
     private val clock: Clock,
 ) {
-    /**
-     * Scans again and again until the coroutine is cancelled: at once while a backlog remains, and
-     * after a pause of [interval] when there is none. A pass that fails is logged and tried again in
-     * a minute, whatever went wrong: one bad pass must not stop the scanner.
-     */
-    suspend fun run(interval: Duration): Nothing {
-        while (true) {
-            val pause =
-                try {
-                    if (scan()) Duration.ZERO else interval
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    when (e) {
-                        // What goes wrong outside and passes by itself: the message says all there is to say.
-                        is MailboxException, is LlmUnavailableException, is TelegramException ->
-                            log.error("{}; trying again in a minute", e.message)
-                        else -> log.error("Unexpected error; trying again in a minute", e)
-                    }
-                    PAUSE_AFTER_FAILURE
-                }
-            delay(pause.toKotlinDuration())
-        }
-    }
-
     /**
      * One pass over the new emails, at most [MAX_PER_PASS] of them. Returns whether more are waiting:
      * a backlog is then worked off pass by pass instead of holding one connection for an hour.
@@ -99,7 +67,7 @@ class Scanner(
     /** Rates the email [raw] and reports it unless it is of low importance. The log tells nothing of its content. */
     private suspend fun handle(uid: Long, raw: ByteArray?) {
         if (raw == null) {
-            log.info("UID {}: already deleted", uid)
+            log.info("{}: UID {}: already deleted", account, uid)
             return
         }
         val mail =
@@ -107,21 +75,20 @@ class Scanner(
                 parseEmail(raw)
             } catch (e: Exception) {
                 // An email nobody can read must not stop the scanner at it for good.
-                log.error("UID {}: could not read the email ({}), skipped", uid, e.javaClass.simpleName)
+                log.error("{}: UID {}: could not read the email ({}), skipped", account, uid, e.javaClass.simpleName)
                 return
             }
         val analysis = analyzer.analyze(mail)
-        log.info("UID {}: {}", uid, analysis.importance)
+        log.info("{}: UID {}: {}", account, uid, analysis.importance)
         if (analysis.importance != Importance.LOW) {
             telegram.sendMessage(emailText(mail, analysis))
-            log.info("UID {}: sent to Telegram", uid)
+            log.info("{}: UID {}: sent to Telegram", account, uid)
         }
     }
 
     companion object {
         const val MAX_PER_PASS = 12
         private const val FIRST_PASS_DAYS_BACK = 1L
-        private val PAUSE_AFTER_FAILURE: Duration = Duration.ofMinutes(1)
         private val log = LoggerFactory.getLogger(Scanner::class.java)
     }
 }

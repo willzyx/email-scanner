@@ -10,14 +10,12 @@ class ConfigException(message: String, cause: Throwable? = null) : Exception(mes
 
 /**
  * Everything the process needs from its environment; see `.env.example`. A variable that is not set,
- * or holds nothing but spaces, takes its default; the ones without a default must be set.
+ * or holds nothing but spaces, takes its default; the one without a default must be set. The mailboxes
+ * are not here: they are listed in a file of their own, see [MailboxConfig].
  */
 data class Env(
-    val imapHost: String,
-    val imapUser: String,
-    val imapPassword: String,
+    /** Of the bot that reports for every mailbox. */
     val telegramBotToken: String,
-    val telegramChatId: String,
     val ollamaUrl: HttpUrl,
     val ollamaModel: String,
     /** The language the model writes summaries in: any language name it understands. */
@@ -26,10 +24,10 @@ data class Env(
     /** The zone "today" is taken in for the first scan's lookback. */
     val zone: ZoneId,
 ) {
-    // The password and the bot token stay out of logs and stack traces.
+    // The bot token stays out of logs and stack traces.
     override fun toString(): String =
-        "Env(imapHost=$imapHost, imapUser=$imapUser, telegramChatId=$telegramChatId, ollamaUrl=$ollamaUrl, " +
-            "ollamaModel=$ollamaModel, summaryLanguage=$summaryLanguage, scanInterval=$scanInterval, zone=$zone)"
+        "Env(ollamaUrl=$ollamaUrl, ollamaModel=$ollamaModel, summaryLanguage=$summaryLanguage, " +
+            "scanInterval=$scanInterval, zone=$zone)"
 
     companion object {
         fun load(environment: Map<String, String> = System.getenv()): Env {
@@ -58,11 +56,7 @@ data class Env(
                     ?: throw ConfigException("OLLAMA_URL: expected an http(s) address, got '$ollamaText'")
 
             return Env(
-                imapHost = get("IMAP_HOST", "imap.gmail.com"),
-                imapUser = required("IMAP_USER"),
-                imapPassword = required("IMAP_PASSWORD"),
                 telegramBotToken = required("TELEGRAM_BOT_TOKEN"),
-                telegramChatId = required("TELEGRAM_CHAT_ID"),
                 ollamaUrl = ollamaUrl,
                 ollamaModel = get("OLLAMA_MODEL", "gemma4:e4b"),
                 summaryLanguage = get("SUMMARY_LANGUAGE", "Russian"),

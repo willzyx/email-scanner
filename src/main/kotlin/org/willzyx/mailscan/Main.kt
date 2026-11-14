@@ -8,11 +8,13 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.willzyx.mailscan.config.ConfigException
 import org.willzyx.mailscan.config.Env
+import org.willzyx.mailscan.config.MailboxConfig
 import org.willzyx.mailscan.db.CursorRepository
 import org.willzyx.mailscan.db.impl.SqliteCursorRepository
 import org.willzyx.mailscan.http.impl.OkHttpJson
 import org.willzyx.mailscan.imap.impl.ImapMailbox
 import org.willzyx.mailscan.llm.impl.OllamaAnalyzer
+import org.willzyx.mailscan.scan.ScanLoop
 import org.willzyx.mailscan.scan.Scanner
 import org.willzyx.mailscan.telegram.impl.HttpTelegramClient
 
@@ -21,14 +23,17 @@ private val log = LoggerFactory.getLogger("mailscan")
 /** Relative to the working directory: `/app/data`, the `mailscan-data` volume, in the container. */
 private val DATABASE: Path = Path.of("data", "mailscan.db")
 
+/** Relative to the working directory as well: compose mounts the file at `/app/mailboxes.yaml`. */
+private val MAILBOXES: Path = Path.of("mailboxes.yaml")
+
 /** The first email after an idle stretch also waits for the model to be loaded, which takes minutes on a CPU. */
 private val OLLAMA_TIMEOUT = Duration.ofMinutes(10)
 private val TELEGRAM_TIMEOUT = Duration.ofSeconds(30)
 
 fun main() {
-    val env =
+    val (env, mailboxes) =
         try {
-            Env.load()
+            Env.load() to MailboxConfig.load(MAILBOXES)
         } catch (e: ConfigException) {
             System.err.println(e.message)
             exitProcess(2)
@@ -36,8 +41,9 @@ fun main() {
 
     try {
         SqliteCursorRepository(DATABASE).use { cursors ->
-            log.info("mailscan is up: {} every {} min ({})", env.imapUser, env.scanInterval.toMinutes(), env.zone)
-            runBlocking { scanner(env, cursors).run(env.scanInterval) }
+            val users = mailboxes.joinToString { it.user }
+            log.info("mailscan is up: {} every {} min ({})", users, env.scanInterval.toMinutes(), env.zone)
+            runBlocking { scanLoop(env, mailboxes, cursors).run(env.scanInterval) }
         }
     } catch (e: Exception) {
         log.error("Fatal", e)
@@ -45,15 +51,22 @@ fun main() {
     }
 }
 
-private fun scanner(env: Env, cursors: CursorRepository): Scanner {
-    val ollama = OkHttpJson.create(OLLAMA_TIMEOUT)
+/** A scanner per mailbox, each reporting to the chat of its mailbox; the model and the bot are the same for all. */
+private fun scanLoop(env: Env, mailboxes: List<MailboxConfig>, cursors: CursorRepository): ScanLoop {
+    val analyzer =
+        OllamaAnalyzer(env.ollamaUrl, env.ollamaModel, env.summaryLanguage, OkHttpJson.create(OLLAMA_TIMEOUT))
     val telegram = OkHttpJson.create(TELEGRAM_TIMEOUT)
-    return Scanner(
-        account = env.imapUser,
-        mailbox = ImapMailbox(env.imapHost, env.imapUser, env.imapPassword),
-        cursors = cursors,
-        analyzer = OllamaAnalyzer(env.ollamaUrl, env.ollamaModel, env.summaryLanguage, ollama),
-        telegram = HttpTelegramClient(telegram, env.telegramBotToken, env.telegramChatId),
-        clock = Clock.system(env.zone),
+    val clock = Clock.system(env.zone)
+    return ScanLoop(
+        mailboxes.map { mailbox ->
+            Scanner(
+                account = mailbox.user,
+                mailbox = ImapMailbox(mailbox.host, mailbox.user, mailbox.password),
+                cursors = cursors,
+                analyzer = analyzer,
+                telegram = HttpTelegramClient(telegram, env.telegramBotToken, mailbox.chatId),
+                clock = clock,
+            )
+        },
     )
 }

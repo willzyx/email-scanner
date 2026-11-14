@@ -47,6 +47,14 @@ services:
       TZ: ${TZ:-Asia/Nicosia}
     volumes:
       - data:/app/data
+      # The mailboxes and their passwords. Without the file compose refuses to start the service
+      # rather than making a directory of that name.
+      - type: bind
+        source: ./mailboxes.yaml
+        target: /app/mailboxes.yaml
+        read_only: true
+        bind:
+          create_host_path: false
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

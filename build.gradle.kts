@@ -14,6 +14,10 @@ repositories {
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.jackson.dataformat.yaml)
+    implementation(libs.jackson.module.kotlin)
+    // The Jackson module asks for an older kotlin-reflect; this keeps it at the version of the compiler.
+    runtimeOnly(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)
     implementation(libs.slf4j.api)

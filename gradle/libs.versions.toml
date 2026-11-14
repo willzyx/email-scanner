@@ -5,6 +5,7 @@ okhttp = "5.5.0"
 slf4j = "2.0.19"
 logback = "1.5.38"
 serialization = "1.11.0"
+jackson = "3.3.0"
 sqlite = "3.54.1.0"
 angusMail = "2.0.5"
 jsoup = "1.24.1"
@@ -16,6 +17,9 @@ detekt = "2.0.0-alpha.6"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+jackson-dataformat-yaml = { module = "tools.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }

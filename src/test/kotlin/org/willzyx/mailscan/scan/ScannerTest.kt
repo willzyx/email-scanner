@@ -1,7 +1,6 @@
 package org.willzyx.mailscan.scan
 
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -11,17 +10,11 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.willzyx.mailscan.db.Cursor
 import org.willzyx.mailscan.db.InMemoryCursorRepository
 import org.willzyx.mailscan.imap.FakeMailbox
 import org.willzyx.mailscan.imap.Mailbox
-import org.willzyx.mailscan.imap.MailboxSession
 import org.willzyx.mailscan.llm.FakeAnalyzer
 import org.willzyx.mailscan.llm.Importance
 import org.willzyx.mailscan.llm.LlmUnavailableException
@@ -31,7 +24,7 @@ import org.willzyx.mailscan.telegram.TelegramException
 private const val ACCOUNT = "me@example.com"
 
 /** A quarter past midnight on 4 November in Nicosia, which is still 3 November in UTC. */
-private val CLOCK = Clock.fixed(Instant.parse("2026-11-03T22:15:00Z"), ZoneId.of("Asia/Nicosia"))
+internal val CLOCK: Clock = Clock.fixed(Instant.parse("2026-11-03T22:15:00Z"), ZoneId.of("Asia/Nicosia"))
 
 class ScannerTest {
     private val cursors = InMemoryCursorRepository()
@@ -214,68 +207,10 @@ class ScannerTest {
             assertTrue("Letter 4" in telegram.sent.single())
             assertEquals(Cursor(uidValidity = 1, lastUid = 4), cursors.get(ACCOUNT))
         }
-
-    @Test
-    fun `runs pass after pass while there is a backlog, then once per interval`() =
-        runTest {
-            val mailbox = mailbox(1..15)
-            val running = launch { scanner(mailbox).run(Duration.ofMinutes(5)) }
-
-            // Two passes at the very start, twelve emails and three, with no pause between them.
-            delay(1.seconds)
-            assertEquals(2, mailbox.sessionsOpened)
-            assertEquals(Cursor(uidValidity = 1, lastUid = 15), cursors.get(ACCOUNT))
-
-            delay(5.minutes - 2.seconds)
-            assertEquals(2, mailbox.sessionsOpened)
-            delay(2.seconds)
-            assertEquals(3, mailbox.sessionsOpened)
-            delay(5.minutes)
-            assertEquals(4, mailbox.sessionsOpened)
-
-            running.cancelAndJoin()
-        }
-
-    @Test
-    fun `a pass that fails is tried again in a minute`() =
-        runTest {
-            val analyzer = FakeAnalyzer()
-            analyzer.downFor = setOf("Letter 2")
-            val running = launch { scanner(mailbox(1..3), analyzer).run(Duration.ofMinutes(5)) }
-
-            delay(1.seconds)
-            assertEquals(Cursor(uidValidity = 1, lastUid = 1), cursors.get(ACCOUNT))
-            analyzer.downFor = emptySet()
-
-            delay(58.seconds)
-            assertEquals(Cursor(uidValidity = 1, lastUid = 1), cursors.get(ACCOUNT))
-            delay(2.seconds)
-            assertEquals(Cursor(uidValidity = 1, lastUid = 3), cursors.get(ACCOUNT))
-
-            running.cancelAndJoin()
-        }
-
-    @Test
-    fun `an error nobody expected does not stop the scanner either`() =
-        runTest {
-            val working = mailbox(1..3)
-            var bug = true
-            val mailbox =
-                object : Mailbox {
-                    override suspend fun open(): MailboxSession = if (bug) error("a bug") else working.open()
-                }
-            val running = launch { scanner(mailbox).run(Duration.ofMinutes(5)) }
-
-            delay(1.seconds)
-            bug = false
-            delay(1.minutes)
-            assertEquals(Cursor(uidValidity = 1, lastUid = 3), cursors.get(ACCOUNT))
-
-            running.cancelAndJoin()
-        }
 }
 
-private fun eml(n: Int): ByteArray {
+/** A plain email with the subject "Letter [n]". */
+internal fun eml(n: Int): ByteArray {
     val email =
         "From: Anya <anya@x.example>\r\nTo: me@example.com\r\nSubject: Letter $n\r\n" +
             "Date: Tue, 03 Nov 2026 10:00:00 +0200\r\n" +
