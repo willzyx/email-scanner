@@ -81,5 +81,7 @@ private fun scanLoop(
                 clock = clock,
             )
         },
+        analyses,
+        clock,
     )
 }

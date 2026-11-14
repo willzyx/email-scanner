@@ -1,6 +1,6 @@
 # mailscan
 
-Reads your inboxes, one or several (Gmail unless told otherwise); a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away, each mailbox to a chat of its own; ads, newsletters and notifications are rated and skipped, nothing is sent for them. Every rating, of a skipped email too, is written down in a local database. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
+Reads your inboxes, one or several (Gmail unless told otherwise); a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away, each mailbox to a chat of its own; ads, newsletters and notifications are rated and skipped, nothing is sent for them. Every rating, of a skipped email too, is kept in a local database for a week. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
 
 The summaries are in Russian by default; change the language with `SUMMARY_LANGUAGE`.
 
@@ -105,7 +105,7 @@ A state reset also deletes the records of the emails rated so far. After it the 
 One file from the server's disk is mounted into the scanner's container, read-only: `mailboxes.yaml`. The rest are two Docker volumes:
 
 - **`mailscan-ollama`**: the model.
-- **`mailscan-data`**: a small SQLite database with two tables: where the scan of each mailbox stopped, and a record of every email the model has rated, the skipped ones included: the sender, the subject, the importance, the summary and the model's reason for it. Records are never deleted.
+- **`mailscan-data`**: a small SQLite database with two tables: where the scan of each mailbox stopped, and a record of every email the model has rated, the skipped ones included: the sender, the subject, the importance, the summary and the model's reason for it. A record is deleted a week after the email was rated.
 
 Email bodies are never stored: they exist only in memory while being processed. The scanner container's file system is read-only; it can write only to its own volume. The logs contain the addresses of your mailboxes, UIDs, importance levels and errors, and nothing from the emails themselves: no senders, subjects or text.
 

@@ -85,6 +85,24 @@ class SqliteAnalysisRepositoryTest {
         }
 
     @Test
+    fun `the emails rated before a moment are deleted, of every mailbox, and counted`() =
+        runTest {
+            SqliteAnalysisRepository(file).use { analyses ->
+                // Rated one, two, three and four seconds after AT.
+                analyses.save(HOME, email(1, Importance.HIGH))
+                analyses.save(WORK, email(2, Importance.LOW))
+                analyses.save(HOME, email(3, Importance.LOW))
+                analyses.save(WORK, email(4, Importance.LOW))
+
+                assertEquals(0, analyses.deleteBefore(AT.plusSeconds(1)))
+                assertEquals(2, analyses.deleteBefore(AT.plusSeconds(3)))
+                assertEquals(0, analyses.deleteBefore(AT.plusSeconds(3)))
+            }
+
+            assertEquals(listOf("$HOME 7 3", "$WORK 7 4"), rows().map { it.split(" | ").take(3).joinToString(" ") })
+        }
+
+    @Test
     fun `the records survive closing and reopening the file`() =
         runTest {
             SqliteAnalysisRepository(file).use { it.save(HOME, email(1, Importance.LOW)) }

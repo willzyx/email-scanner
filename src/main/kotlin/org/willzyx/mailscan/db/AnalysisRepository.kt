@@ -16,10 +16,13 @@ data class AnalyzedEmail(
 )
 
 /**
- * Every email the model has rated, of whatever importance, kept across restarts. A mailbox is named
- * by its account, as in [CursorRepository]. The text of an email is not stored.
+ * The emails the model has rated, of whatever importance, kept across restarts until they are deleted
+ * as too old. A mailbox is named by its account, as in [CursorRepository]. The text of an email is not stored.
  */
 interface AnalysisRepository {
     /** Keeps [email] of the mailbox of [account]. An email rated a second time replaces its first record. */
     suspend fun save(account: String, email: AnalyzedEmail)
+
+    /** Deletes the emails rated before [time], of every mailbox, and returns how many there were. */
+    suspend fun deleteBefore(time: Instant): Int
 }

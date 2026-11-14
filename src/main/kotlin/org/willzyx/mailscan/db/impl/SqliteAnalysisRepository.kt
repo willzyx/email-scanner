@@ -2,6 +2,7 @@ package org.willzyx.mailscan.db.impl
 
 import java.nio.file.Path
 import java.sql.Connection
+import java.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,6 +69,14 @@ class SqliteAnalysisRepository(
                 }
         }
     }
+
+    override suspend fun deleteBefore(time: Instant): Int =
+        withContext(dispatcher) {
+            connection.prepareStatement("delete from email_analysis where analyzed_at < ?").use { statement ->
+                statement.setLong(1, time.epochSecond)
+                statement.executeUpdate()
+            }
+        }
 
     override fun close() = connection.close()
 }

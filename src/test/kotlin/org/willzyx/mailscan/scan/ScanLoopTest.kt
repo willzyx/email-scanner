@@ -10,6 +10,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import org.willzyx.mailscan.db.AnalyzedEmail
 import org.willzyx.mailscan.db.Cursor
 import org.willzyx.mailscan.db.InMemoryAnalysisRepository
 import org.willzyx.mailscan.db.InMemoryCursorRepository
@@ -17,6 +18,7 @@ import org.willzyx.mailscan.imap.FakeMailbox
 import org.willzyx.mailscan.imap.Mailbox
 import org.willzyx.mailscan.imap.MailboxException
 import org.willzyx.mailscan.imap.MailboxSession
+import org.willzyx.mailscan.llm.Analysis
 import org.willzyx.mailscan.llm.FakeAnalyzer
 import org.willzyx.mailscan.llm.Importance
 import org.willzyx.mailscan.telegram.FakeTelegramClient
@@ -37,7 +39,15 @@ class ScanLoopTest {
     private fun work(mailbox: Mailbox, analyzer: FakeAnalyzer = FakeAnalyzer()) =
         Scanner(WORK, mailbox, cursors, analyses, analyzer, workChat, CLOCK)
 
+    private fun loop(vararg scanners: Scanner) = ScanLoop(scanners.toList(), analyses, CLOCK)
+
     private fun mailbox(uids: Iterable<Int>) = FakeMailbox(uids.associate { it.toLong() to eml(it) })
+
+    /** An email of [account] that was rated [ago] before now. */
+    private suspend fun rated(account: String, uid: Long, ago: Duration) {
+        val analysis = Analysis(Importance.LOW, "Summary", "reason", actionRequired = false)
+        analyses.save(account, AnalyzedEmail(1, uid, CLOCK.instant() - ago, "Anya", "Old letter $uid", analysis))
+    }
 
     /** A mailbox that works as [working] does once [down] is set to false. */
     private class Flaky(private val working: Mailbox, private val failure: () -> Exception) : Mailbox {
@@ -50,7 +60,7 @@ class ScanLoopTest {
     fun `runs round after round while there is a backlog, then once per interval`() =
         runTest {
             val mailbox = mailbox(1..15)
-            val running = launch { ScanLoop(listOf(home(mailbox))).run(INTERVAL) }
+            val running = launch { loop(home(mailbox)).run(INTERVAL) }
 
             // Two passes at the very start, twelve emails and three, with no pause between them.
             delay(1.seconds)
@@ -71,8 +81,8 @@ class ScanLoopTest {
     fun `the mailboxes are scanned one after another, each to its own cursor, records and chat`() =
         runTest {
             val analyzer = FakeAnalyzer(mapOf("Letter 1" to Importance.HIGH, "Letter 13" to Importance.MEDIUM))
-            val scanners = listOf(home(mailbox(1..2), analyzer), work(mailbox(11..13), analyzer))
-            val running = launch { ScanLoop(scanners).run(INTERVAL) }
+            val scanners = arrayOf(home(mailbox(1..2), analyzer), work(mailbox(11..13), analyzer))
+            val running = launch { loop(*scanners).run(INTERVAL) }
 
             delay(1.seconds)
             assertEquals(listOf("Letter 1", "Letter 2", "Letter 11", "Letter 12", "Letter 13"), analyzer.saw)
@@ -91,7 +101,7 @@ class ScanLoopTest {
         runTest {
             val backlogged = mailbox(1..15)
             val quiet = mailbox(1..2)
-            val running = launch { ScanLoop(listOf(home(backlogged), work(quiet))).run(INTERVAL) }
+            val running = launch { loop(home(backlogged), work(quiet)).run(INTERVAL) }
 
             delay(1.seconds)
             assertEquals(Cursor(uidValidity = 1, lastUid = 15), cursors.get(HOME))
@@ -105,7 +115,7 @@ class ScanLoopTest {
     fun `a mailbox that fails does not hold up the next one and is tried again in a minute`() =
         runTest {
             val broken = Flaky(mailbox(1..3)) { MailboxException("IMAP imap.example.com: no route to host") }
-            val running = launch { ScanLoop(listOf(home(broken), work(mailbox(1..2)))).run(INTERVAL) }
+            val running = launch { loop(home(broken), work(mailbox(1..2))).run(INTERVAL) }
 
             delay(1.seconds)
             assertNull(cursors.get(HOME))
@@ -125,7 +135,7 @@ class ScanLoopTest {
         runTest {
             val analyzer = FakeAnalyzer()
             analyzer.downFor = setOf("Letter 2")
-            val running = launch { ScanLoop(listOf(home(mailbox(1..3), analyzer))).run(INTERVAL) }
+            val running = launch { loop(home(mailbox(1..3), analyzer)).run(INTERVAL) }
 
             delay(1.seconds)
             assertEquals(Cursor(uidValidity = 1, lastUid = 1), cursors.get(HOME))
@@ -140,10 +150,44 @@ class ScanLoopTest {
         }
 
     @Test
+    fun `emails rated more than a week ago are deleted, those of a mailbox no longer scanned too`() =
+        runTest {
+            rated(HOME, uid = 101, ago = Duration.ofDays(7).plusSeconds(1))
+            rated(HOME, uid = 102, ago = Duration.ofDays(7))
+            rated(WORK, uid = 103, ago = Duration.ofDays(30))
+            val running = launch { loop(home(mailbox(1..2))).run(INTERVAL) }
+
+            delay(1.seconds)
+            assertEquals(listOf(102L, 1L, 2L), analyses.of(HOME).map { it.uid })
+            assertEquals(emptyList(), analyses.of(WORK))
+
+            running.cancelAndJoin()
+        }
+
+    @Test
+    fun `a deletion that fails does not hold up the mailboxes and is tried again in a minute`() =
+        runTest {
+            rated(HOME, uid = 101, ago = Duration.ofDays(8))
+            analyses.down = true
+            val running = launch { loop(home(mailbox(1..2))).run(INTERVAL) }
+
+            delay(1.seconds)
+            assertEquals(listOf(101L, 1L, 2L), analyses.of(HOME).map { it.uid })
+            analyses.down = false
+
+            delay(58.seconds)
+            assertEquals(3, analyses.of(HOME).size)
+            delay(2.seconds)
+            assertEquals(listOf(1L, 2L), analyses.of(HOME).map { it.uid })
+
+            running.cancelAndJoin()
+        }
+
+    @Test
     fun `an error nobody expected does not stop the loop either`() =
         runTest {
             val buggy = Flaky(mailbox(1..3)) { IllegalStateException("a bug") }
-            val running = launch { ScanLoop(listOf(home(buggy))).run(INTERVAL) }
+            val running = launch { loop(home(buggy)).run(INTERVAL) }
 
             delay(1.seconds)
             buggy.down = false
