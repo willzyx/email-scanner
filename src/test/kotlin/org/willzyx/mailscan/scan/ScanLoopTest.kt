@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.willzyx.mailscan.db.Cursor
+import org.willzyx.mailscan.db.InMemoryAnalysisRepository
 import org.willzyx.mailscan.db.InMemoryCursorRepository
 import org.willzyx.mailscan.imap.FakeMailbox
 import org.willzyx.mailscan.imap.Mailbox
@@ -26,14 +27,15 @@ private val INTERVAL = Duration.ofMinutes(5)
 
 class ScanLoopTest {
     private val cursors = InMemoryCursorRepository()
+    private val analyses = InMemoryAnalysisRepository()
     private val homeChat = FakeTelegramClient()
     private val workChat = FakeTelegramClient()
 
     private fun home(mailbox: Mailbox, analyzer: FakeAnalyzer = FakeAnalyzer()) =
-        Scanner(HOME, mailbox, cursors, analyzer, homeChat, CLOCK)
+        Scanner(HOME, mailbox, cursors, analyses, analyzer, homeChat, CLOCK)
 
     private fun work(mailbox: Mailbox, analyzer: FakeAnalyzer = FakeAnalyzer()) =
-        Scanner(WORK, mailbox, cursors, analyzer, workChat, CLOCK)
+        Scanner(WORK, mailbox, cursors, analyses, analyzer, workChat, CLOCK)
 
     private fun mailbox(uids: Iterable<Int>) = FakeMailbox(uids.associate { it.toLong() to eml(it) })
 
@@ -66,7 +68,7 @@ class ScanLoopTest {
         }
 
     @Test
-    fun `the mailboxes are scanned one after another, each to its own cursor and its own chat`() =
+    fun `the mailboxes are scanned one after another, each to its own cursor, records and chat`() =
         runTest {
             val analyzer = FakeAnalyzer(mapOf("Letter 1" to Importance.HIGH, "Letter 13" to Importance.MEDIUM))
             val scanners = listOf(home(mailbox(1..2), analyzer), work(mailbox(11..13), analyzer))
@@ -78,6 +80,8 @@ class ScanLoopTest {
             assertEquals(Cursor(uidValidity = 1, lastUid = 13), cursors.get(WORK))
             assertEquals(listOf("Letter 1"), homeChat.sent.map { subject(it) })
             assertEquals(listOf("Letter 13"), workChat.sent.map { subject(it) })
+            assertEquals(listOf("Letter 1", "Letter 2"), analyses.of(HOME).map { it.subject })
+            assertEquals(listOf("Letter 11", "Letter 12", "Letter 13"), analyses.of(WORK).map { it.subject })
 
             running.cancelAndJoin()
         }

@@ -1,6 +1,6 @@
 # mailscan
 
-Reads your inboxes, one or several (Gmail unless told otherwise); a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away, each mailbox to a chat of its own; ads, newsletters and notifications are rated and skipped, nothing is sent for them. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
+Reads your inboxes, one or several (Gmail unless told otherwise); a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away, each mailbox to a chat of its own; ads, newsletters and notifications are rated and skipped, nothing is sent for them. Every rating, of a skipped email too, is written down in a local database. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
 
 The summaries are in Russian by default; change the language with `SUMMARY_LANGUAGE`.
 
@@ -98,14 +98,14 @@ A mailbox scanned for the first time gives its emails from the last 24 hours. A 
 | Reset the state (the model stays) | `docker compose down && docker volume rm mailscan-data` |
 | Remove everything, including the model | `docker compose down -v` |
 
-After a state reset the scanner starts as on the first run: emails from the last 24 hours of every mailbox, and the important ones among them arrive again.
+A state reset also deletes the records of the emails rated so far. After it the scanner starts as on the first run: emails from the last 24 hours of every mailbox, and the important ones among them arrive again.
 
 ## Where the data lives
 
 One file from the server's disk is mounted into the scanner's container, read-only: `mailboxes.yaml`. The rest are two Docker volumes:
 
 - **`mailscan-ollama`**: the model.
-- **`mailscan-data`**: a tiny SQLite database with one thing in it: where the scan of each mailbox stopped. Nothing about the emails themselves is stored.
+- **`mailscan-data`**: a small SQLite database with two tables: where the scan of each mailbox stopped, and a record of every email the model has rated, the skipped ones included: the sender, the subject, the importance, the summary and the model's reason for it. Records are never deleted.
 
 Email bodies are never stored: they exist only in memory while being processed. The scanner container's file system is read-only; it can write only to its own volume. The logs contain the addresses of your mailboxes, UIDs, importance levels and errors, and nothing from the emails themselves: no senders, subjects or text.
 
@@ -133,7 +133,7 @@ The image build runs `./gradlew build` too, so an image whose tests fail is neve
 | `mail` | reading an email: sender, subject and the body as text (HTML without its hidden parts) |
 | `llm` | the prompt, the Ollama client and the reading of the model's answer |
 | `telegram` | the text of a message about an email and the Bot API client |
-| `db` | where the scan stopped, in SQLite |
+| `db` | where the scan stopped and what the model said of each email, in SQLite |
 | `scan` | one pass over the new emails of a mailbox and the loop that goes round the mailboxes |
 | `http` | JSON over HTTP for the Ollama and Telegram clients |
 

@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory
 import org.willzyx.mailscan.config.ConfigException
 import org.willzyx.mailscan.config.Env
 import org.willzyx.mailscan.config.MailboxConfig
+import org.willzyx.mailscan.db.AnalysisRepository
 import org.willzyx.mailscan.db.CursorRepository
+import org.willzyx.mailscan.db.impl.SqliteAnalysisRepository
 import org.willzyx.mailscan.db.impl.SqliteCursorRepository
 import org.willzyx.mailscan.http.impl.OkHttpJson
 import org.willzyx.mailscan.imap.impl.ImapMailbox
@@ -41,9 +43,11 @@ fun main() {
 
     try {
         SqliteCursorRepository(DATABASE).use { cursors ->
-            val users = mailboxes.joinToString { it.user }
-            log.info("mailscan is up: {} every {} min ({})", users, env.scanInterval.toMinutes(), env.zone)
-            runBlocking { scanLoop(env, mailboxes, cursors).run(env.scanInterval) }
+            SqliteAnalysisRepository(DATABASE).use { analyses ->
+                val users = mailboxes.joinToString { it.user }
+                log.info("mailscan is up: {} every {} min ({})", users, env.scanInterval.toMinutes(), env.zone)
+                runBlocking { scanLoop(env, mailboxes, cursors, analyses).run(env.scanInterval) }
+            }
         }
     } catch (e: Exception) {
         log.error("Fatal", e)
@@ -51,8 +55,16 @@ fun main() {
     }
 }
 
-/** A scanner per mailbox, each reporting to the chat of its mailbox; the model and the bot are the same for all. */
-private fun scanLoop(env: Env, mailboxes: List<MailboxConfig>, cursors: CursorRepository): ScanLoop {
+/**
+ * A scanner per mailbox, each reporting to the chat of its mailbox; the model, the bot and the database
+ * are the same for all.
+ */
+private fun scanLoop(
+    env: Env,
+    mailboxes: List<MailboxConfig>,
+    cursors: CursorRepository,
+    analyses: AnalysisRepository,
+): ScanLoop {
     val analyzer =
         OllamaAnalyzer(env.ollamaUrl, env.ollamaModel, env.summaryLanguage, OkHttpJson.create(OLLAMA_TIMEOUT))
     val telegram = OkHttpJson.create(TELEGRAM_TIMEOUT)
@@ -63,6 +75,7 @@ private fun scanLoop(env: Env, mailboxes: List<MailboxConfig>, cursors: CursorRe
                 account = mailbox.user,
                 mailbox = ImapMailbox(mailbox.host, mailbox.user, mailbox.password),
                 cursors = cursors,
+                analyses = analyses,
                 analyzer = analyzer,
                 telegram = HttpTelegramClient(telegram, env.telegramBotToken, mailbox.chatId),
                 clock = clock,

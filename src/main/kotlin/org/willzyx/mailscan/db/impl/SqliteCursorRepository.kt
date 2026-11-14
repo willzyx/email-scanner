@@ -1,9 +1,7 @@
 package org.willzyx.mailscan.db.impl
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.Connection
-import java.sql.DriverManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,11 +17,9 @@ class SqliteCursorRepository(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : CursorRepository,
     AutoCloseable {
-    private val connection: Connection
+    private val connection: Connection = openSqlite(path)
 
     init {
-        path.toAbsolutePath().parent?.let { Files.createDirectories(it) }
-        connection = DriverManager.getConnection("jdbc:sqlite:$path")
         connection.createStatement().use { statement ->
             statement.executeUpdate(
                 """

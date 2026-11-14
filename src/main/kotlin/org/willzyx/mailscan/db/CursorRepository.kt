@@ -5,7 +5,7 @@ data class Cursor(val uidValidity: Long, val lastUid: Long)
 
 /**
  * The scan position of each mailbox, kept across restarts. A mailbox is named by its account: the
- * address it is logged in to with. Nothing about the emails themselves is stored.
+ * address it is logged in to with.
  */
 interface CursorRepository {
     /** The cursor of the mailbox of [account], or null if it has never been scanned. */

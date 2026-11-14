@@ -11,10 +11,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import org.willzyx.mailscan.db.AnalyzedEmail
 import org.willzyx.mailscan.db.Cursor
+import org.willzyx.mailscan.db.InMemoryAnalysisRepository
 import org.willzyx.mailscan.db.InMemoryCursorRepository
 import org.willzyx.mailscan.imap.FakeMailbox
 import org.willzyx.mailscan.imap.Mailbox
+import org.willzyx.mailscan.llm.Analysis
 import org.willzyx.mailscan.llm.FakeAnalyzer
 import org.willzyx.mailscan.llm.Importance
 import org.willzyx.mailscan.llm.LlmUnavailableException
@@ -28,10 +31,11 @@ internal val CLOCK: Clock = Clock.fixed(Instant.parse("2026-11-03T22:15:00Z"), Z
 
 class ScannerTest {
     private val cursors = InMemoryCursorRepository()
+    private val analyses = InMemoryAnalysisRepository()
     private val telegram = FakeTelegramClient()
 
     private fun scanner(mailbox: Mailbox, analyzer: FakeAnalyzer = FakeAnalyzer(), account: String = ACCOUNT) =
-        Scanner(account, mailbox, cursors, analyzer, telegram, CLOCK)
+        Scanner(account, mailbox, cursors, analyses, analyzer, telegram, CLOCK)
 
     private fun mailbox(uids: Iterable<Int>, uidValidity: Long = 1) =
         FakeMailbox(uids.associate { it.toLong() to eml(it) }, uidValidity)
@@ -159,6 +163,39 @@ class ScannerTest {
         }
 
     @Test
+    fun `every rated email is written down, the low ones too`() =
+        runTest {
+            val analyzer = FakeAnalyzer(mapOf("Letter 1" to Importance.HIGH, "Letter 3" to Importance.MEDIUM))
+
+            scanner(mailbox(1..3, uidValidity = 9), analyzer).scan()
+
+            assertEquals(
+                listOf(Importance.HIGH, Importance.LOW, Importance.MEDIUM).mapIndexed { index, importance ->
+                    val n = index + 1
+                    AnalyzedEmail(
+                        uidValidity = 9,
+                        uid = n.toLong(),
+                        analyzedAt = CLOCK.instant(),
+                        sender = "Anya <anya@x.example>",
+                        subject = "Letter $n",
+                        analysis = Analysis(importance, "Summary of Letter $n", "reason", actionRequired = false),
+                    )
+                },
+                analyses.of(ACCOUNT),
+            )
+        }
+
+    @Test
+    fun `each mailbox has records of its own`() =
+        runTest {
+            scanner(mailbox(1..2), account = "home@example.com").scan()
+            scanner(mailbox(1..3), account = "work@example.com").scan()
+
+            assertEquals(listOf(1L, 2L), analyses.of("home@example.com").map { it.uid })
+            assertEquals(listOf(1L, 2L, 3L), analyses.of("work@example.com").map { it.uid })
+        }
+
+    @Test
     fun `when the model is down, the pass stops and the next one starts with the same email`() =
         runTest {
             val analyzer = FakeAnalyzer()
@@ -168,6 +205,7 @@ class ScannerTest {
             assertFailsWith<LlmUnavailableException> { scanner(mailbox, analyzer).scan() }
             assertEquals(Cursor(uidValidity = 1, lastUid = 1), cursors.get(ACCOUNT))
             assertEquals(1, mailbox.sessionsClosed)
+            assertEquals(listOf(1L), analyses.of(ACCOUNT).map { it.uid })
 
             analyzer.downFor = emptySet()
             scanner(mailbox, analyzer).scan()
@@ -191,6 +229,8 @@ class ScannerTest {
             assertEquals(Cursor(uidValidity = 1, lastUid = 2), cursors.get(ACCOUNT))
             assertEquals(listOf("Letter 1", "Letter 2", "Letter 2"), analyzer.saw)
             assertTrue("Letter 2" in telegram.sent.single())
+            // Rated twice, written down once.
+            assertEquals(listOf(1L, 2L), analyses.of(ACCOUNT).map { it.uid })
         }
 
     @Test
@@ -205,6 +245,7 @@ class ScannerTest {
 
             assertEquals(listOf("Letter 4"), analyzer.saw)
             assertTrue("Letter 4" in telegram.sent.single())
+            assertEquals(listOf(4L), analyses.of(ACCOUNT).map { it.uid })
             assertEquals(Cursor(uidValidity = 1, lastUid = 4), cursors.get(ACCOUNT))
         }
 }

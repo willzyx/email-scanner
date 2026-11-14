@@ -1,8 +1,6 @@
 package org.willzyx.mailscan.db.impl
 
 import java.nio.file.Path
-import java.sql.DriverManager
-import java.sql.Statement
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -38,7 +36,10 @@ class SqliteCursorRepositoryTest {
                 assertEquals(Cursor(uidValidity = 8, lastUid = 2), cursors.get(HOME))
                 assertEquals(Cursor(uidValidity = 3, lastUid = 5), cursors.get(WORK))
             }
-            assertEquals(listOf("$HOME 8 2", "$WORK 3 5"), query("select * from mailbox_cursor order by account"))
+            assertEquals(
+                listOf("$HOME | 8 | 2", "$WORK | 3 | 5"),
+                query(file, "select * from mailbox_cursor order by account"),
+            )
         }
 
     @Test
@@ -62,33 +63,18 @@ class SqliteCursorRepositoryTest {
     fun `the state table of the Python version is neither read nor touched`() =
         runTest {
             // The schema and the rows the Python version left in the database.
-            jdbc { execute("CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL)") }
-            jdbc { execute("INSERT INTO state (key, value) VALUES ('INBOX:uidvalidity', '7')") }
-            jdbc { execute("INSERT INTO state (key, value) VALUES ('INBOX:last_uid', '99')") }
+            jdbc(file) { execute("CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL)") }
+            jdbc(file) { execute("INSERT INTO state (key, value) VALUES ('INBOX:uidvalidity', '7')") }
+            jdbc(file) { execute("INSERT INTO state (key, value) VALUES ('INBOX:last_uid', '99')") }
 
             SqliteCursorRepository(file).use { cursors ->
                 assertNull(cursors.get(HOME))
                 cursors.set(HOME, Cursor(uidValidity = 7, lastUid = 100))
             }
 
-            assertEquals(listOf("INBOX:last_uid 99", "INBOX:uidvalidity 7"), query("select * from state order by key"))
+            assertEquals(
+                listOf("INBOX:last_uid | 99", "INBOX:uidvalidity | 7"),
+                query(file, "select * from state order by key"),
+            )
         }
-
-    private fun jdbc(block: Statement.() -> Unit) {
-        DriverManager.getConnection("jdbc:sqlite:$file").use { connection ->
-            connection.createStatement().use(block)
-        }
-    }
-
-    /** The rows [sql] selects, each as its column values joined with spaces. */
-    private fun query(sql: String): List<String> {
-        val result = mutableListOf<String>()
-        jdbc {
-            executeQuery(sql).use { rows ->
-                val columns = 1..rows.metaData.columnCount
-                while (rows.next()) result += columns.joinToString(" ") { rows.getString(it) }
-            }
-        }
-        return result
-    }
 }
