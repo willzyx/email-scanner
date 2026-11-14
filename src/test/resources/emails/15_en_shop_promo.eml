@@ -1,0 +1,32 @@
+From: UrbanGear <news@urbangear.example>
+To: me@example.com
+Subject: Black Friday starts NOW: up to 60% off =?utf-8?q?=F0=9F=94=A5?=
+Date: Tue, 03 Nov 2026 07:00:00 +0000
+Message-ID: <bf-2026-launch-77341@urbangear.example>
+List-Unsubscribe: <https://urbangear.example/unsubscribe?u=77341>
+Precedence: bulk
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<!DOCTYPE html>
+<html><head><meta charset=3D"utf-8">
+<style>.btn{background:#000;color:#fff;padding:12px 24px}</style>
+<script>window.dataLayer=3Dwindow.dataLayer||[];</script>
+</head>
+<body>
+<table width=3D"600" align=3D"center">
+  <tr><td><h1>Black Friday is here =E2=80=94 up to 60% off</h1></td></tr>
+  <tr><td>
+    <p>Jackets, sneakers and backpacks at the lowest prices of the year.</p>
+    <p>Members get early access and free shipping on orders over 50 EUR.</p>
+    <p><a class=3D"btn" href=3D"https://urbangear.example/black-friday">Shop =
+now</a></p>
+  </td></tr>
+  <tr><td style=3D"font-size:11px;color:#999">
+    You are receiving this email because you subscribed to UrbanGear news.
+    <a href=3D"https://urbangear.example/unsubscribe?u=3D77341">Unsubscribe</=
+a>
+  </td></tr>
+</table>
+</body></html>

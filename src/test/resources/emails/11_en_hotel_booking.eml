@@ -1,0 +1,40 @@
+From: StayNest <bookings@staynest.example>
+To: me@example.com
+Subject: Booking confirmed: Nafplio Old Town Suites, =?utf-8?q?28=E2=80=9329?=
+ Nov
+Date: Tue, 03 Nov 2026 12:31:56 +0000
+Message-ID: <booking-5582019344@staynest.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============4829208210785592347=="
+
+--===============4829208210785592347==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Your booking is confirmed!
+
+Nafplio Old Town Suites — Nafplio, Greece
+Check-in: Sat 28 Nov 2026, from 14:00
+Check-out: Sun 29 Nov 2026, until 11:00
+Guests: 2 adults, 1 room
+Total: 96.00 EUR, pay at the property
+
+Free cancellation until 25 Nov 2026, 23:59 (local time).
+
+Booking number: 5582 019 344
+Manage your booking: https://staynest.example/manage/5582019344
+
+--===============4829208210785592347==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Your booking is confirmed!</p><p>Nafplio Old Town Suites =E2=
+=80=94 Nafplio, Greece<br>Check-in: Sat 28 Nov 2026, from 14:00<br>Check-out:=
+ Sun 29 Nov 2026, until 11:00<br>Guests: 2 adults, 1 room<br>Total: 96.00 EUR=
+, pay at the property</p><p>Free cancellation until 25 Nov 2026, 23:59 (local=
+ time).</p><p>Booking number: 5582 019 344<br>Manage your booking: https://st=
+aynest.example/manage/5582019344<br></p></body></html>
+
+--===============4829208210785592347==--

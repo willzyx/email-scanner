@@ -1,0 +1,43 @@
+From: Poste Consegne <avviso@poste-consegne-it.example>
+To: me@example.com
+Subject: Il tuo pacco =?utf-8?q?=C3=A8_in_giacenza=3A_pagamento_di_1=2C99_?=
+ =?utf-8?b?4oKs?= richiesto
+Date: Tue, 03 Nov 2026 06:47:12 +0100
+Message-ID: <giacenza-IT8823910455@poste-consegne-it.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============0185693538411742725=="
+
+--===============0185693538411742725==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Gentile cliente,
+
+il tuo pacco n. IT8823910455 =C3=A8 arrivato al nostro centro di smistamento =
+ma non pu=C3=B2 essere
+consegnato: risultano non pagati i diritti doganali di 1,99 =E2=82=AC.
+
+Per evitare la restituzione al mittente, completa il pagamento entro 24 ore a=
+l seguente link:
+https://poste-consegne-it.example/pagamento?id=3DIT8823910455
+
+Se il pagamento non verr=C3=A0 effettuato, il pacco sar=C3=A0 distrutto.
+
+Cordiali saluti,
+Servizio Clienti Consegne
+
+--===============0185693538411742725==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Gentile cliente,</p><p>il tuo pacco n. IT8823910455 =C3=A8 arr=
+ivato al nostro centro di smistamento ma non pu=C3=B2 essere<br>consegnato: r=
+isultano non pagati i diritti doganali di 1,99 =E2=82=AC.</p><p>Per evitare l=
+a restituzione al mittente, completa il pagamento entro 24 ore al seguente li=
+nk:<br>https://poste-consegne-it.example/pagamento?id=3DIT8823910455</p><p>Se=
+ il pagamento non verr=C3=A0 effettuato, il pacco sar=C3=A0 distrutto.</p><p>=
+Cordiali saluti,<br>Servizio Clienti Consegne<br></p></body></html>
+
+--===============0185693538411742725==--

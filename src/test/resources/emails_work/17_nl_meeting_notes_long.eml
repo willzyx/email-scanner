@@ -1,0 +1,65 @@
+From: Sanne de Vries <sanne.devries@payflow.example>
+To: me@example.com
+Subject: Notulen sprint review 3 november
+Date: Tue, 03 Nov 2026 16:55:10 +0100
+Message-ID: <notulen-sr-1103@payflow.example>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hoi allemaal,
+
+Hierbij de notulen van de sprint review van vandaag. Voor jou staat er =C3=A9=
+=C3=A9n actiepunt in
+(zie onderaan bij Actiepunten).
+
+Aanwezig: Sanne, Pieter, Mark, Olek, Lucas, jij
+Afwezig: Femke (ziek)
+
+1. Demo's
+- Pieter liet de nieuwe retry-logica voor webhooks zien. Mislukte webhooks wo=
+rden nu tot
+  6 keer opnieuw verstuurd met exponenti=C3=ABle backoff (1, 2, 4, 8, 16, 32 =
+minuten). Klanten
+  kunnen in het dashboard per webhook de status volgen.
+- Lucas demonstreerde het herziene onboardingformulier voor zakelijke klanten=
+. Het aantal
+  velden is teruggebracht van 23 naar 14; KvK-gegevens worden automatisch opg=
+ehaald.
+- Mark gaf een korte terugblik op het incident van vandaag (INC-2026-1103). D=
+e rollback naar
+  3.14.1 is geslaagd; de postmortem volgt donderdag.
+
+2. Metrics
+- Gemiddelde responstijd API: 182 ms (vorige sprint 205 ms).
+- Foutpercentage checkout: 0,4% (exclusief het incident).
+- Aantal nieuwe zakelijke klanten deze sprint: 37.
+
+3. Besluiten
+- De release van 3.15 schuiven we een week op naar 19 november, zodat de fix =
+voor de
+  reconciliatiequery eerst grondig getest kan worden.
+- We stoppen met het oude rapportage-endpoint /v1/reports per 1 februari; kla=
+nten krijgen
+  hierover in december een mail.
+- Vanaf de volgende sprint doen we de stand-up om 9:45 in plaats van 9:30.
+
+4. Actiepunten
+- Pieter: documentatie van de webhook-retry bijwerken =E2=80=94 v=C3=B3=C3=B3=
+r vrijdag.
+- Lucas: A/B-test van het nieuwe onboardingformulier opzetten =E2=80=94 volge=
+nde sprint.
+- Olek: postmortem INC-2026-1103 voorbereiden =E2=80=94 donderdag.
+- Jij: de offerte voor MercadoAlto reviewen (vooral de staffelprijzen op pagi=
+na 3) en je
+  akkoord of opmerkingen naar Sanne sturen =E2=80=94 v=C3=B3=C3=B3r woensdag =
+11 november. Luc=C3=ADa wil de
+  offerte uiterlijk 13 november ontvangen.
+- Sanne: klantmail over het uitfaseren van /v1/reports opstellen =E2=80=94 de=
+cember.
+
+5. Volgende sprint review
+Dinsdag 17 november, 16:00=E2=80=9317:00, zelfde Teams-link.
+
+Groet,
+Sanne

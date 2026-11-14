@@ -1,0 +1,26 @@
+From:
+ =?utf-8?q?Luc=C3=ADa_Fern=C3=A1ndez?= <lucia.fernandez@mercadoalto.example>
+To: me@example.com
+Subject: Duda sobre los =?utf-8?q?l=C3=ADmites?= de la API de pagos
+Date: Tue, 03 Nov 2026 11:05:37 +0100
+Message-ID: <api-limits-2231@mercadoalto.example>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hola,
+
+estamos integrando vuestra API de pagos en nuestra tienda online. En la docum=
+entaci=C3=B3n no queda
+claro si el l=C3=ADmite de 100 solicitudes por minuto se aplica por clave API=
+ o por cuenta completa.
+Tenemos tres claves (web, app m=C3=B3vil y backoffice), as=C3=AD que nos afec=
+ta bastante al dimensionar.
+
+=C2=BFPodr=C3=ADas aclar=C3=A1rmelo cuando tengas un momento? No es urgente: =
+el lanzamiento est=C3=A1 previsto
+para mediados de enero.
+
+Un saludo,
+Luc=C3=ADa Fern=C3=A1ndez
+CTO =C2=B7 MercadoAlto

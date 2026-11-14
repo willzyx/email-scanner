@@ -1,0 +1,2 @@
+# Test emails are kept byte for byte: their CRLF line ends and trailing spaces are part of the format.
+*.eml -text

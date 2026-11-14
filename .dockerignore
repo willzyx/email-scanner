@@ -1,7 +1,7 @@
 .env
-.venv/
 data/
-prototype/
-tests/
-**/__pycache__/
-.pytest_cache/
+.git/
+.idea/
+build/
+.gradle/
+.kotlin/

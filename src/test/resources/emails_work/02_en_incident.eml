@@ -1,0 +1,39 @@
+From: Mark Ellison <mark.ellison@payflow.example>
+To: me@example.com
+Subject: [URGENT] prod-payments: replica lag 40 min, need your approval to
+ roll back 3.14.2
+Date: Tue, 03 Nov 2026 13:47:02 +0000
+Message-ID: <inc-20261103-0042@payflow.example>
+In-Reply-To: <inc-20261103-0041@payflow.example>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi,
+
+Quick update on INC-2026-1103 =E2=80=94 it's getting worse.
+
+- Since the 3.14.2 release at 12:30 UTC the read replica of payments-db is la=
+gging ~40 minutes.
+- ~3% of card payments are failing with "balance check timeout". Support alre=
+ady has 120+ tickets.
+- Root cause looks like the new reconciliation query doing full scans on ledg=
+er_entries.
+
+I want to roll back to 3.14.1. The rollback includes a down-migration, so per=
+ policy it needs
+approval from the service owner =E2=80=94 that's you.
+
+Please reply "approve" by 15:00 UTC. If I don't hear back, I'll escalate to t=
+he CTO.
+
+Thanks,
+Mark (SRE on-call)
+
+On Tue, Nov 3, 2026 at 13:05, Mark Ellison <mark.ellison@payflow.example> wro=
+te:
+> Heads up: we're seeing elevated latency on payments-db replica after the 3.=
+14.2 deploy.
+> Investigating, will update in 30 min.
+>
+> Dashboards: https://grafana.payflow.example/d/payments-db

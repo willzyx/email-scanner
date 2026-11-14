@@ -1,0 +1,49 @@
+From: Harbor Medical Centre <appointments@harbormedical.example>
+To: me@example.com
+Subject: Reminder: appointment Thu 5 Nov, 10:30 =?utf-8?b?4oCU?= please
+ confirm
+Date: Tue, 03 Nov 2026 08:05:11 +0200
+Message-ID: <appt-reminder-55120@harbormedical.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============5887999146250561050=="
+
+--===============5887999146250561050==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Dear patient,
+
+This is a reminder of your appointment with Dr. Eleni Markou (General Practic=
+e):
+
+Date: Thursday, 5 November 2026
+Time: 10:30
+Location: Harbor Medical Centre, 2nd floor, room 214
+
+Dr. Markou would like to go over your recent blood test results with you.
+Please bring your ID and a list of any medications you are currently taking.
+
+Please confirm or cancel by replying to this email or by calling +30 210 000 =
+0001
+before Wednesday 4 November, 18:00. Unconfirmed appointments may be released =
+to other patients.
+
+Harbor Medical Centre
+
+--===============5887999146250561050==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Dear patient,</p><p>This is a reminder of your appointment wit=
+h Dr. Eleni Markou (General Practice):</p><p>Date: Thursday, 5 November 2026<=
+br>Time: 10:30<br>Location: Harbor Medical Centre, 2nd floor, room 214</p><p>=
+Dr. Markou would like to go over your recent blood test results with you.<br>=
+Please bring your ID and a list of any medications you are currently taking.<=
+/p><p>Please confirm or cancel by replying to this email or by calling +30 21=
+0 000 0001<br>before Wednesday 4 November, 18:00. Unconfirmed appointments ma=
+y be released to other patients.</p><p>Harbor Medical Centre<br></p></body></=
+html>
+
+--===============5887999146250561050==--

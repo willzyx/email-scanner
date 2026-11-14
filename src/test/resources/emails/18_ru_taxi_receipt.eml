@@ -1,0 +1,41 @@
+From:
+ =?utf-8?b?0KLQsNC60YHQuCDQkdGL0YHRgtGA0L4=?= <receipts@taxi-bystro.example>
+To: me@example.com
+Subject: =?utf-8?b?0KfQtdC6INC30LAg0L/QvtC10LfQtNC60YMgMiDQvdC+0Y/QsdGA0Y8s?=
+ 452 =?utf-8?b?4oK9?=
+Date: Mon, 02 Nov 2026 23:42:10 +0300
+Message-ID: <receipt-77812@taxi-bystro.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============3609021452066061254=="
+
+--===============3609021452066061254==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Спасибо за поездку!
+
+2 ноября 2026, 23:14 → 23:41
+Откуда: ул. Лесная, 5
+Куда: Ленинградский проспект, 39
+Тариф: Комфорт
+Итого: 452 ₽, оплачено картой *4417
+
+Кассовый чек: https://taxi-bystro.example/receipt/77812
+Оцените поездку в приложении.
+
+--===============3609021452066061254==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+
+PGh0bWw+PGJvZHk+PHA+0KHQv9Cw0YHQuNCx0L4g0LfQsCDQv9C+0LXQt9C00LrRgyE8L3A+PHA+
+MiDQvdC+0Y/QsdGA0Y8gMjAyNiwgMjM6MTQg4oaSIDIzOjQxPGJyPtCe0YLQutGD0LTQsDog0YPQ
+uy4g0JvQtdGB0L3QsNGPLCA1PGJyPtCa0YPQtNCwOiDQm9C10L3QuNC90LPRgNCw0LTRgdC60LjQ
+uSDQv9GA0L7RgdC/0LXQutGCLCAzOTxicj7QotCw0YDQuNGEOiDQmtC+0LzRhNC+0YDRgjxicj7Q
+mNGC0L7Qs9C+OiA0NTIg4oK9LCDQvtC/0LvQsNGH0LXQvdC+INC60LDRgNGC0L7QuSAqNDQxNzwv
+cD48cD7QmtCw0YHRgdC+0LLRi9C5INGH0LXQujogaHR0cHM6Ly90YXhpLWJ5c3Ryby5leGFtcGxl
+L3JlY2VpcHQvNzc4MTI8YnI+0J7RhtC10L3QuNGC0LUg0L/QvtC10LfQtNC60YMg0LIg0L/RgNC4
+0LvQvtC20LXQvdC40LguPGJyPjwvcD48L2JvZHk+PC9odG1sPgo=
+
+--===============3609021452066061254==--

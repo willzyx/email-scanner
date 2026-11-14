@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+# ktlint, tuned to the style the code is written in rather than reformatting all of it.
+ktlint_code_style = intellij_idea
+ij_kotlin_imports_layout = *
+ktlint_standard_class-signature = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled
+
+[*.{yml,yaml,toml,json}]
+indent_style = space
+indent_size = 2
+
+# Test emails are kept byte for byte: their CRLF line ends and trailing spaces are part of the format.
+[*.eml]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset

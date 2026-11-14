@@ -10,7 +10,7 @@ The summaries are in Russian by default; change the language with `SUMMARY_LANGU
 
 - **`ollama`**: the model. No port is published; only the scanner can reach it inside the compose network.
 - **`ollama-pull`**: one-shot. On the first start it downloads the model (6.6 GB) and does nothing after that.
-- **`mailscan`**: the scanner with its own schedule: it checks the mail every minute (`SCAN_INTERVAL_MIN`).
+- **`mailscan`**: the scanner with its own schedule: it checks the mail, waits a minute (`SCAN_INTERVAL_MIN`) and checks again.
 
 The mailbox is opened read-only: emails are not marked as read, moved or deleted. Only the inbox (`INBOX`) is scanned; the archive and other Gmail labels are not read.
 
@@ -21,9 +21,9 @@ If Telegram is unreachable when an important email comes in, the scanner stops a
 - Docker with compose v2.
 - 12 GB of RAM or more: the model takes ~7 GB while it processes emails and unloads after a minute of idling.
 - ~16 GB of disk: the Ollama image is 8.5 GB and the model 6.6 GB.
-- Internet: on the first start (to download the model) and while running (Gmail, Telegram).
+- Internet: to build the image, on the first start (to download the model) and while running (Gmail, Telegram).
 
-Speed depends on the CPU: a laptop with a Core Ultra 7 155U takes ~36 s per email.
+Speed depends on the CPU: a laptop with a Core Ultra 7 155U takes ~36 s per email. The scanner itself is a JVM process held to 256 MB; it takes about 50 MB.
 
 ## Setup
 
@@ -47,14 +47,15 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Fill in `IMAP_USER`, `IMAP_PASSWORD`, `TELEGRAM_BOT_TOKEN`. The other variables are described in `.env.example`; you don't have to change them. `SUMMARY_LANGUAGE` sets the language the model writes summaries in (`Russian` by default).
+Fill in `IMAP_USER`, `IMAP_PASSWORD`, `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; the scanner does not start without all four. The other variables are described in `.env.example`; you don't have to change them. `SUMMARY_LANGUAGE` sets the language the model writes summaries in (`Russian` by default).
 
-Find out `TELEGRAM_CHAT_ID` and put it into `.env`:
+To find out `TELEGRAM_CHAT_ID`, ask Telegram what the bot has received, after you have sent it a message:
 
 ```sh
-docker compose build mailscan
-./mailscan.sh telegram-chat-id
+curl -s "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates"
 ```
+
+The number you need is `id` inside `"chat"`: `..."chat":{"id":123456789,"first_name":...`.
 
 ## Running
 
@@ -63,23 +64,16 @@ docker compose up -d
 docker compose logs -f mailscan
 ```
 
-The first start downloads the model, which takes a while. Check Telegram:
+The first start builds the image and downloads the model, which takes a while. The log then says `mailscan is up`, and a line per email follows as the mail comes in.
 
-```sh
-./mailscan.sh telegram-test
-```
-
-On the first run the scanner takes the emails from the last 24 hours.
+On the first run the scanner takes the emails from the last 24 hours. A wrong bot token or chat id shows up in the log when the first email is to be sent: `Telegram sendMessage: 400 Bad Request: chat not found`.
 
 ## Maintenance
-
-`./mailscan.sh` runs a `python -m mailscan` command in a fresh container that exits when the command is done; the running scanner is not touched.
 
 | What | Command |
 |---|---|
 | Logs | `docker compose logs -f mailscan` |
-| Status: where the scan stopped | `./mailscan.sh status` |
-| See what the model says about the last 5 emails, without sending anything | `./mailscan.sh check` (`-n 20` for more) |
+| Stop and start the scanner | `docker compose stop mailscan`, `docker compose start mailscan` |
 | Update the code | copy the new files, then `docker compose up -d --build` |
 | Reset the state (the model stays) | `docker compose down && docker volume rm mailscan-data` |
 | Remove everything, including the model | `docker compose down -v` |
@@ -93,24 +87,32 @@ Nothing from the server's disk is mounted into the containers, only two Docker v
 - **`mailscan-ollama`**: the model.
 - **`mailscan-data`**: a tiny SQLite database with one thing in it: where the scan stopped. Nothing about the emails themselves is stored.
 
-Email bodies are never stored: they exist only in memory while being processed. The scanner container's file system is read-only; it can write only to its own volume. The logs contain UIDs, importance levels and errors, no subjects or addresses.
+Email bodies are never stored: they exist only in memory while being processed. The scanner container's file system is read-only; it can write only to its own volume. The logs contain the address of your mailbox, UIDs, importance levels and errors, and nothing from the emails themselves: no senders, subjects or text.
 
 Secrets live in `.env`. Compose passes them to the container as environment variables, and `docker inspect` can show them: access to Docker on the server equals access to the mailbox.
 
 ## Development
 
-You need [uv](https://docs.astral.sh/uv/). The scanner itself uses only the Python standard library; `pytest` is needed only for the tests.
+You need JDK 21; Gradle comes with the wrapper. Building the image needs no JDK on the machine: it happens inside Docker.
 
 ```sh
-uv sync
-uv run pytest
-uv run --env-file .env python -m mailscan check -n 3   # without Docker: the last 3 emails via a local Ollama on localhost:11434
+./gradlew build          # ktlint, detekt and every test; the mail server and the database of the tests run inside the test process
+./gradlew ktlintFormat   # fix what ktlint can fix by itself
+./gradlew installDist    # then, without Docker, against a local Ollama on localhost:11434:
+set -a; . ./.env; set +a; build/install/mailscan/bin/mailscan
 ```
 
-`prototype/` is a model benchmark on 20 test home emails (RU/EN/EL); it is not included in the image:
+The image build runs `./gradlew build` too, so an image whose tests fail is never built.
 
-```sh
-uv run python prototype/bench.py --models gemma4:e4b --runs 1
-```
+| Package | What lives there |
+|---|---|
+| `config` | the environment variables |
+| `imap` | the read-only mailbox: which emails are new, and their content |
+| `mail` | reading an email: sender, subject and the body as text (HTML without its hidden parts) |
+| `llm` | the prompt, the Ollama client and the reading of the model's answer |
+| `telegram` | the text of a message about an email and the Bot API client |
+| `db` | where the scan stopped, in SQLite |
+| `scan` | one pass over the new emails and the loop that repeats it |
+| `http` | JSON over HTTP for the Ollama and Telegram clients |
 
-The numbers in `prototype/bench-run*.log` were measured with the previous, Russian-language prompt. Re-run `bench.py` to refresh them.
+The test emails in `src/test/resources` are made up: 20 home ones and 20 work ones, in 17 languages.

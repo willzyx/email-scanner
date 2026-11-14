@@ -1,0 +1,26 @@
+# detekt on top of its default rules, tuned to the style the code is written in rather than rewriting it.
+
+complexity:
+  CyclomaticComplexMethod:
+    # A `when` over a sealed type has one plain branch per case; that is dispatch, not branching logic.
+    ignoreSimpleWhenEntries: true
+  LongParameterList:
+    # A parameter with a default is a setting the caller may leave alone, not one more argument to line up.
+    ignoreDefaultParameters: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    # The run loop, the per-email step and main catch everything on purpose, so that one failure
+    # never stops the scanner; CancellationException is rethrown before each of those catches.
+    active: false
+
+style:
+  MagicNumber:
+    # Protocol limits and default durations read best with the number in place.
+    active: false
+  ReturnCount:
+    # `?: return` at the top of a function is a guard, not another exit to follow.
+    excludeGuardClauses: true
+  ThrowsCount:
+    # Env parsing throws one ConfigException per bad variable.
+    active: false

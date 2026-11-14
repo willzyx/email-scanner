@@ -1,0 +1,48 @@
+From: Boutique =?utf-8?q?Lumi=C3=A8re?= <newsletter@boutique-lumiere.example>
+To: me@example.com
+Subject: =?utf-8?q?=F0=9F=8E=89_-30=25_sur_toute_la_collection_d=27automne_?=
+ =?utf-8?b?4oCU?= ce week-end seulement !
+Date: Tue, 03 Nov 2026 07:00:00 +0100
+Message-ID: <nl-2026-11-03-7731@boutique-lumiere.example>
+List-Unsubscribe: <https://boutique-lumiere.example/unsubscribe?u=7731>,
+ <mailto:unsubscribe@boutique-lumiere.example>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Precedence: bulk
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<!DOCTYPE html>
+<html><head><meta charset=3D"utf-8"><style>
+  body { font-family: Georgia, serif; background:#f7f2ea; }
+  .btn { background:#c0392b; color:#fff; padding:12px 24px; text-decoration:n=
+one; }
+</style></head>
+<body>
+<table width=3D"600" align=3D"center" cellpadding=3D"0" cellspacing=3D"0">
+  <tr><td><img src=3D"https://boutique-lumiere.example/img/logo.png" alt=3D"B=
+outique Lumi=C3=A8re"></td></tr>
+  <tr><td><h1>Les Journ=C3=A9es Lumi=C3=A8re sont l=C3=A0&nbsp;!</h1></td></t=
+r>
+  <tr><td>
+    <p>Profitez de <b>-30&nbsp;%</b> sur toute la collection d'automne&nbsp;:=
+ pulls en cachemire,
+    manteaux en laine et bottines en cuir.</p>
+    <p>Offre valable du vendredi 6 au dimanche 8 novembre, en boutique et en =
+ligne,
+    avec le code <b>AUTOMNE30</b>.</p>
+    <p><a class=3D"btn" href=3D"https://boutique-lumiere.example/soldes">Je d=
+=C3=A9couvre la collection</a></p>
+  </td></tr>
+  <tr><td><ul><li>Livraison gratuite d=C3=A8s 60&nbsp;=E2=82=AC</li><li>Retou=
+rs sous 30 jours</li></ul></td></tr>
+  <tr><td style=3D"font-size:11px;color:#888">
+    Vous recevez cet e-mail car vous =C3=AAtes inscrit(e) =C3=A0 la newslette=
+r Boutique Lumi=C3=A8re.<br>
+    <a href=3D"https://boutique-lumiere.example/unsubscribe?u=3D7731">Se d=C3=
+=A9sinscrire</a> =C2=B7
+    12 rue des Lilas, 75011 Paris
+  </td></tr>
+</table>
+<script>var tracking =3D "should-not-appear-in-text";</script>
+</body></html>
