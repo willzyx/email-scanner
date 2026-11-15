@@ -6,7 +6,7 @@ import org.willzyx.mailscan.db.AnalyzedEmail
 fun interface DigestWriter {
     /**
      * The digest of [emails], the rated emails of one mailbox, of which there is at least one: plain
-     * text, not yet made safe for Telegram.
+     * text, a paragraph of prose, not yet made safe for Telegram.
      *
      * @throws LlmUnavailableException when the model cannot be asked or writes nothing
      */

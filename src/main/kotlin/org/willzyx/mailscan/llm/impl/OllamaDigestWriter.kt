@@ -10,7 +10,7 @@ import org.willzyx.mailscan.llm.mergePrompt
 
 /**
  * [DigestWriter] on the model of [chat], which writes in [language]. The model gets the emails most
- * important first, then in the order they were rated, and answers in free text.
+ * important first, then in the order they were rated, and answers in free text, a paragraph of prose.
  *
  * The emails that fit one request are retold in one. More of them are retold portion by portion, and
  * the model then joins the parts, in several rounds when the parts do not fit one request either.

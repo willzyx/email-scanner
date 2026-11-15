@@ -13,13 +13,15 @@ fun digestPrompt(language: String): String =
     You write a digest of the user's personal (home) email for a period of several hours.
     You get a list of the emails that came in. Each has an importance (high, medium or low), a sender, a subject and a short summary.
 
-    Write the digest in $language:
-    - First the emails the user has to act on or answer, one line each: who writes, what is needed, by when.
-    - Then the other emails that concern the user personally, one line each, or one line for several about the same thing.
-    - Then the rest in one or two lines, grouped by kind with a count (“6 newsletters and promotions from shops”), without listing each one.
-    - Skip a group that has no emails. No introduction and no conclusion.
+    Retell them in $language as one short paragraph of connected prose, the way a news digest sums up what happened:
+    - You may open with one sentence on what the mail of the period was like in general.
+    - Then the emails marked high or “action required”: who writes, what is needed, by when.
+    - Then the emails marked medium, a sentence each, or one sentence for several.
+    - Last the emails marked low, in one or two sentences for all of them: who sent them and, in a few words, what about.
+    Speak only of the emails that came: never say that emails of some kind did not come, and never name the importance levels.
+    Write the names of senders and companies the way the list has them, without translating them.
 
-    Format: plain text, every line starts with “• ”. No Markdown, no HTML, no headings. At most 1000 characters.
+    Format: plain text, one paragraph of three to six sentences, no line breaks. No lists, no Markdown, no HTML, no headings. No greeting and no conclusion. At most 800 characters.
 
     Say only what the list says: add no facts, guesses or advice. If a summary warns that an email looks like phishing, keep the warning.
     Never copy codes or secrets: one-time and verification codes, passwords, card, account and IBAN numbers, tracking and booking numbers, links. Amounts, dates and times are fine.
@@ -33,15 +35,16 @@ fun digestPrompt(language: String): String =
  */
 fun mergePrompt(language: String): String =
     """
-    You get several parts of one digest of the user's personal (home) email. Each part retells a different group of emails of the same period; the first parts cover the more important emails.
+    You get several parts of one digest of the user's personal (home) email. Each part is a paragraph that retells a different group of emails of the same period; the first parts cover the more important emails.
 
-    Join the parts into one digest in $language:
-    - Keep every line about an email the user has to act on or that concerns the user personally.
-    - Join the lines about minor emails (newsletters, promotions, notifications) into one or two lines and add up their counts.
-    - Order: what needs action first, then the personal, then the rest.
-    - No introduction and no conclusion.
+    Join the parts in $language into one short paragraph of connected prose, the way a news digest sums up what happened:
+    - Keep everything the parts say about emails the user has to act on or that concern the user personally: who writes, what is needed, by when.
+    - Say more briefly what the parts say about newsletters, promotions and notifications, and say in one place what is said of one sender.
+    - Keep the order: what needs action first, then the personal, then the rest. One opening sentence at most.
+    Speak only of the emails that came: never say that emails of some kind did not come.
+    Write the names of senders and companies the way the parts have them, without translating them.
 
-    Format: plain text, every line starts with “• ”. No Markdown, no HTML, no headings. At most 1500 characters.
+    Format: plain text, one paragraph of four to eight sentences, no line breaks. No lists, no Markdown, no HTML, no headings. No greeting and no conclusion. At most 1200 characters.
 
     Say only what the parts say: add no facts, guesses or advice. Keep phishing warnings.
     Never copy codes or secrets: one-time and verification codes, passwords, card, account and IBAN numbers, tracking and booking numbers, links. Amounts, dates and times are fine.

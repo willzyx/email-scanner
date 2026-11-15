@@ -66,7 +66,7 @@ class DigesterTest {
                 2 Nov 21:00 – 3 Nov 10:30
                 🔴 1 · 🟡 1 · ⚪ 1
 
-                • Digest of Evening, Night, Morning
+                Digest of Evening, Night, Morning
                 """.trimIndent(),
                 telegram.sent.single(),
             )
@@ -101,7 +101,7 @@ class DigesterTest {
             assertEquals(2, telegram.sent.size)
             val lines = telegram.sent.last().lines()
             assertEquals("3 Nov 09:04 – 21:00", lines[1])
-            assertEquals("• Digest of Noon, Evening", lines.last())
+            assertEquals("Digest of Noon, Evening", lines.last())
             assertEquals(at("2026-11-03T21:00"), digests.get(HOME))
         }
 
@@ -166,7 +166,7 @@ class DigesterTest {
             assertEquals(2, telegram.sent.size)
             val lines = telegram.sent.last().lines()
             assertEquals("1 Nov 09:00 – 3 Nov 15:01", lines[1])
-            assertEquals("• Digest of Just before the stop, After the start", lines.last())
+            assertEquals("Digest of Just before the stop, After the start", lines.last())
         }
 
     @Test
@@ -203,7 +203,7 @@ class DigesterTest {
             rated("2026-11-03T09:00:30", "Came meanwhile")
             digester("2026-11-03T09:01").sendIfDue()
 
-            assertEquals("• Digest of Night, Came meanwhile", telegram.sent.single().lines().last())
+            assertEquals("Digest of Night, Came meanwhile", telegram.sent.single().lines().last())
             assertEquals(at("2026-11-03T09:01"), digests.get(HOME))
         }
 

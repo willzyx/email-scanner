@@ -13,6 +13,6 @@ class FakeDigestWriter : DigestWriter {
     override suspend fun write(emails: List<AnalyzedEmail>): String {
         asked += emails
         if (down) throw LlmUnavailableException("Ollama is unavailable: connection refused")
-        return "• Digest of " + emails.joinToString { it.subject }
+        return "Digest of " + emails.joinToString { it.subject }
     }
 }

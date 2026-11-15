@@ -40,22 +40,21 @@ class DigestTextTest {
             15 Nov 09:04 – 21:00
             🔴 1 · 🟡 3 · ⚪ 14
 
-            • The bank asks to confirm a payment today.
-            • 14 newsletters and notifications.
+            The bank asks to confirm a payment today. The rest are newsletters.
             """.trimIndent(),
             digestText(
                 HOME,
                 at("2026-11-15T09:04"),
                 at("2026-11-15T21:00"),
                 emails(high = 1, medium = 3, low = 14),
-                "• The bank asks to confirm a payment today.\n• 14 newsletters and notifications.",
+                "The bank asks to confirm a payment today. The rest are newsletters.",
             ),
         )
     }
 
     @Test
     fun `a period that goes over midnight names both days`() {
-        val text = digestText(HOME, at("2026-11-14T21:02"), at("2026-11-15T09:01"), emails(0, 0, 1), "• Text")
+        val text = digestText(HOME, at("2026-11-14T21:02"), at("2026-11-15T09:01"), emails(0, 0, 1), "Text")
         assertEquals("14 Nov 21:02 – 15 Nov 09:01", text.lines()[1])
     }
 
@@ -63,12 +62,12 @@ class DigestTextTest {
     fun `the period is told by the clock of the zone it is given in`() {
         val from = Instant.parse("2026-11-15T07:04:00Z").atZone(NICOSIA)
         val until = Instant.parse("2026-11-15T19:00:00Z").atZone(NICOSIA)
-        assertEquals("15 Nov 09:04 – 21:00", digestText(HOME, from, until, emails(0, 0, 1), "• Text").lines()[1])
+        assertEquals("15 Nov 09:04 – 21:00", digestText(HOME, from, until, emails(0, 0, 1), "Text").lines()[1])
     }
 
     @Test
     fun `an importance no email has is counted as zero`() {
-        val text = digestText(HOME, at("2026-11-15T09:04"), at("2026-11-15T21:00"), emails(0, 2, 0), "• Text")
+        val text = digestText(HOME, at("2026-11-15T09:04"), at("2026-11-15T21:00"), emails(0, 2, 0), "Text")
         assertEquals("🔴 0 · 🟡 2 · ⚪ 0", text.lines()[2])
     }
 
@@ -80,10 +79,10 @@ class DigestTextTest {
                 at("2026-11-15T09:04"),
                 at("2026-11-15T21:00"),
                 emails(0, 0, 1),
-                "• <b>bold</b> & more",
+                "<b>bold</b> & more",
             )
         assertEquals("📬 <b>Digest</b> · a&amp;b@example.com", text.lines().first())
-        assertEquals("• &lt;b&gt;bold&lt;/b&gt; &amp; more", text.lines().last())
+        assertEquals("&lt;b&gt;bold&lt;/b&gt; &amp; more", text.lines().last())
     }
 
     @Test

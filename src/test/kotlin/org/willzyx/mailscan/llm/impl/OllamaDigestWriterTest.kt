@@ -53,12 +53,12 @@ class OllamaDigestWriterTest {
     @Test
     fun `asks the model to retell the emails and returns its text`() =
         runTest {
-            val http = ollama("• A digest\n• of two lines")
+            val http = ollama("A digest in two sentences. This is the second.")
             val emails = listOf(email(1, Importance.HIGH), email(2, Importance.LOW))
 
             val digest = writer(http).write(emails)
 
-            assertEquals("• A digest\n• of two lines", digest)
+            assertEquals("A digest in two sentences. This is the second.", digest)
             val request = http.calls.single().body.jsonObject
             // Free text: no schema to hold the answer to.
             assertFalse("format" in request)
@@ -67,22 +67,22 @@ class OllamaDigestWriterTest {
                 request["options"],
             )
             val (system, user) = messages(http.calls.single())
-            assertTrue("Write the digest in Russian:" in system)
+            assertTrue("Retell them in Russian as one short paragraph" in system)
             assertEquals(digestEntry(emails[0]) + "\n\n" + digestEntry(emails[1]), user)
         }
 
     @Test
     fun `the language of the digest goes into the system prompt`() =
         runTest {
-            val http = ollama("• A digest")
+            val http = ollama("A digest")
             writer(http, language = "Greek").write(listOf(email(1, Importance.LOW)))
-            assertTrue("Write the digest in Greek:" in messages(http.calls.single())[0])
+            assertTrue("Retell them in Greek as one short paragraph" in messages(http.calls.single())[0])
         }
 
     @Test
     fun `the model gets the emails most important first, then in the order they were rated`() =
         runTest {
-            val http = ollama("• A digest")
+            val http = ollama("A digest")
             val emails =
                 listOf(
                     email(1, Importance.LOW),
@@ -102,7 +102,7 @@ class OllamaDigestWriterTest {
     fun `emails that do not fit one request are retold in portions, and the model then joins the parts`() =
         runTest {
             var asked = 0
-            val http = FakeJsonHttp { _, _ -> answer("• Answer ${++asked}") }
+            val http = FakeJsonHttp { _, _ -> answer("Answer ${++asked}") }
             val emails = longEmails(30)
 
             val digest = writer(http).write(emails)
@@ -118,9 +118,9 @@ class OllamaDigestWriterTest {
 
             val (system, user) = messages(http.calls.last())
             assertTrue(system.startsWith("You get several parts of one digest"), system)
-            assertTrue("Join the parts into one digest in Russian:" in system)
-            assertEquals("Part 1:\n• Answer 1\n\nPart 2:\n• Answer 2\n\nPart 3:\n• Answer 3", user)
-            assertEquals("• Answer 4", digest)
+            assertTrue("Join the parts in Russian into one short paragraph" in system)
+            assertEquals("Part 1:\nAnswer 1\n\nPart 2:\nAnswer 2\n\nPart 3:\nAnswer 3", user)
+            assertEquals("Answer 4", digest)
         }
 
     @Test
@@ -144,14 +144,14 @@ class OllamaDigestWriterTest {
     fun `a part the model writes nothing for fails the whole digest`() =
         runTest {
             var asked = 0
-            val http = FakeJsonHttp { _, _ -> answer(if (++asked == 2) "" else "• Answer $asked") }
+            val http = FakeJsonHttp { _, _ -> answer(if (++asked == 2) "" else "Answer $asked") }
             assertFailsWith<LlmUnavailableException> { writer(http).write(longEmails(30)) }
         }
 
     @Test
     fun `the space around the model's text is dropped`() =
         runTest {
-            assertEquals("• A digest", writer(ollama("\n\n  • A digest \n")).write(listOf(email(1, Importance.LOW))))
+            assertEquals("A digest", writer(ollama("\n\n  A digest \n")).write(listOf(email(1, Importance.LOW))))
         }
 
     @Test

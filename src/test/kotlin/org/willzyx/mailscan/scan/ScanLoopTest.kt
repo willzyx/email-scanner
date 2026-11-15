@@ -207,7 +207,7 @@ class ScanLoopTest {
                 3 Nov 09:00 – 4 Nov 00:15
                 🔴 0 · 🟡 0 · ⚪ 1
 
-                • Digest of Old letter 101
+                Digest of Old letter 101
                 """.trimIndent(),
                 homeChat.sent.single(),
             )
@@ -232,7 +232,7 @@ class ScanLoopTest {
             val writer =
                 DigestWriter {
                     seenWhenAsked += analyzer.saw.size
-                    "• A digest"
+                    "A digest"
                 }
             val running = launch { loop(home(mailbox(1..15), analyzer, writer)).run(INTERVAL) }
 
