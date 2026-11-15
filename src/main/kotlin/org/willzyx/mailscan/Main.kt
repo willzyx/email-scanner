@@ -15,6 +15,7 @@ import org.willzyx.mailscan.db.DigestRepository
 import org.willzyx.mailscan.db.impl.SqliteAnalysisRepository
 import org.willzyx.mailscan.db.impl.SqliteCursorRepository
 import org.willzyx.mailscan.db.impl.SqliteDigestRepository
+import org.willzyx.mailscan.db.impl.openSqlite
 import org.willzyx.mailscan.http.impl.OkHttpJson
 import org.willzyx.mailscan.imap.impl.ImapMailbox
 import org.willzyx.mailscan.llm.impl.OllamaAnalyzer
@@ -47,19 +48,18 @@ fun main() {
         }
 
     try {
-        SqliteCursorRepository(DATABASE).use { cursors ->
-            SqliteAnalysisRepository(DATABASE).use { analyses ->
-                SqliteDigestRepository(DATABASE).use { digests ->
-                    log.info(
-                        "mailscan is up: {} every {} min, digests at {} ({})",
-                        mailboxes.joinToString { it.user },
-                        env.scanInterval.toMinutes(),
-                        env.digestTimes.joinToString(),
-                        env.zone,
-                    )
-                    runBlocking { scanLoop(env, mailboxes, cursors, analyses, digests).run(env.scanInterval) }
-                }
-            }
+        openSqlite(DATABASE).use { db ->
+            val cursors = SqliteCursorRepository(db)
+            val analyses = SqliteAnalysisRepository(db)
+            val digests = SqliteDigestRepository(db)
+            log.info(
+                "mailscan is up: {} every {} min, digests at {} ({})",
+                mailboxes.joinToString { it.user },
+                env.scanInterval.toMinutes(),
+                env.digestTimes.joinToString(),
+                env.zone,
+            )
+            runBlocking { scanLoop(env, mailboxes, cursors, analyses, digests).run(env.scanInterval) }
         }
     } catch (e: Exception) {
         log.error("Fatal", e)

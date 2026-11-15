@@ -24,7 +24,8 @@ class SqliteDigestRepositoryTest {
     @Test
     fun `a mailbox that has had no digest has no time`() =
         runTest {
-            SqliteDigestRepository(file).use { digests ->
+            openSqlite(file).use { db ->
+                val digests = SqliteDigestRepository(db)
                 assertNull(digests.get(HOME))
             }
         }
@@ -32,7 +33,8 @@ class SqliteDigestRepositoryTest {
     @Test
     fun `the time is kept per mailbox and replaced by the next one`() =
         runTest {
-            SqliteDigestRepository(file).use { digests ->
+            openSqlite(file).use { db ->
+                val digests = SqliteDigestRepository(db)
                 digests.set(HOME, AT)
                 digests.set(WORK, AT.plusSeconds(5))
                 digests.set(HOME, AT.plusSeconds(60))
@@ -49,7 +51,8 @@ class SqliteDigestRepositoryTest {
     @Test
     fun `the time is kept to the second`() =
         runTest {
-            SqliteDigestRepository(file).use { digests ->
+            openSqlite(file).use { db ->
+                val digests = SqliteDigestRepository(db)
                 digests.set(HOME, AT.plusMillis(999))
                 assertEquals(AT, digests.get(HOME))
             }
@@ -58,22 +61,22 @@ class SqliteDigestRepositoryTest {
     @Test
     fun `the time survives closing and reopening the file`() =
         runTest {
-            SqliteDigestRepository(file).use { it.set(HOME, AT) }
-            SqliteDigestRepository(file).use { assertEquals(AT, it.get(HOME)) }
+            openSqlite(file).use { SqliteDigestRepository(it).set(HOME, AT) }
+            openSqlite(file).use { assertEquals(AT, SqliteDigestRepository(it).get(HOME)) }
         }
 
     @Test
-    fun `the times live in one file with the cursors, each written through its own connection`() =
+    fun `the times live in one file with the cursors, both written through one connection`() =
         runTest {
-            SqliteCursorRepository(file).use { cursors ->
-                SqliteDigestRepository(file).use { digests ->
-                    for (n in 1L..3L) {
-                        cursors.set(HOME, Cursor(uidValidity = 7, lastUid = n))
-                        digests.set(HOME, AT.plusSeconds(n))
-                    }
-                    assertEquals(Cursor(uidValidity = 7, lastUid = 3), cursors.get(HOME))
-                    assertEquals(AT.plusSeconds(3), digests.get(HOME))
+            openSqlite(file).use { db ->
+                val cursors = SqliteCursorRepository(db)
+                val digests = SqliteDigestRepository(db)
+                for (n in 1L..3L) {
+                    cursors.set(HOME, Cursor(uidValidity = 7, lastUid = n))
+                    digests.set(HOME, AT.plusSeconds(n))
                 }
+                assertEquals(Cursor(uidValidity = 7, lastUid = 3), cursors.get(HOME))
+                assertEquals(AT.plusSeconds(3), digests.get(HOME))
             }
         }
 }

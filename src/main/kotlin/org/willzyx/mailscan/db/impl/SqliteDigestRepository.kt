@@ -1,6 +1,5 @@
 package org.willzyx.mailscan.db.impl
 
-import java.nio.file.Path
 import java.sql.Connection
 import java.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -9,17 +8,13 @@ import kotlinx.coroutines.withContext
 import org.willzyx.mailscan.db.DigestRepository
 
 /**
- * [DigestRepository] in the SQLite file at [path], one row of `email_digest` per mailbox. The file,
- * its directory and the table are created when missing; the file may be the one the cursors and the
- * rated emails are in. Close it when done.
+ * [DigestRepository] in the SQLite database behind [connection], one row of `email_digest` per
+ * mailbox. The table is created when missing. The connection stays the caller's to close.
  */
 class SqliteDigestRepository(
-    path: Path,
+    private val connection: Connection,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : DigestRepository,
-    AutoCloseable {
-    private val connection: Connection = openSqlite(path)
-
+) : DigestRepository {
     init {
         connection.createStatement().use { statement ->
             statement.executeUpdate(
@@ -54,6 +49,4 @@ class SqliteDigestRepository(
                 }
         }
     }
-
-    override fun close() = connection.close()
 }

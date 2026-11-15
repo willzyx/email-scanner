@@ -1,6 +1,5 @@
 package org.willzyx.mailscan.db.impl
 
-import java.nio.file.Path
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant
@@ -13,17 +12,13 @@ import org.willzyx.mailscan.llm.Analysis
 import org.willzyx.mailscan.llm.Importance
 
 /**
- * [AnalysisRepository] in the SQLite file at [path], one row of `email_analysis` per email. The file,
- * its directory and the table are created when missing; the file may be the one the cursors are in.
- * Close it when done.
+ * [AnalysisRepository] in the SQLite database behind [connection], one row of `email_analysis` per
+ * email. The table is created when missing. The connection stays the caller's to close.
  */
 class SqliteAnalysisRepository(
-    path: Path,
+    private val connection: Connection,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : AnalysisRepository,
-    AutoCloseable {
-    private val connection: Connection = openSqlite(path)
-
+) : AnalysisRepository {
     init {
         connection.createStatement().use { statement ->
             statement.executeUpdate(
@@ -104,8 +99,6 @@ class SqliteAnalysisRepository(
                 statement.executeUpdate()
             }
         }
-
-    override fun close() = connection.close()
 }
 
 /** The email in the current row of [rows], its columns in the order [SqliteAnalysisRepository.between] selects them. */

@@ -1,6 +1,5 @@
 package org.willzyx.mailscan.db.impl
 
-import java.nio.file.Path
 import java.sql.Connection
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -9,16 +8,13 @@ import org.willzyx.mailscan.db.Cursor
 import org.willzyx.mailscan.db.CursorRepository
 
 /**
- * [CursorRepository] in the SQLite file at [path], one row of `mailbox_cursor` per mailbox. The file,
- * its directory and the table are created when missing. Close it when done.
+ * [CursorRepository] in the SQLite database behind [connection], one row of `mailbox_cursor` per
+ * mailbox. The table is created when missing. The connection stays the caller's to close.
  */
 class SqliteCursorRepository(
-    path: Path,
+    private val connection: Connection,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : CursorRepository,
-    AutoCloseable {
-    private val connection: Connection = openSqlite(path)
-
+) : CursorRepository {
     init {
         connection.createStatement().use { statement ->
             statement.executeUpdate(
@@ -59,6 +55,4 @@ class SqliteCursorRepository(
                 }
         }
     }
-
-    override fun close() = connection.close()
 }

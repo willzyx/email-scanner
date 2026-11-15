@@ -20,7 +20,8 @@ class SqliteCursorRepositoryTest {
     @Test
     fun `a mailbox that was never scanned has no cursor`() =
         runTest {
-            SqliteCursorRepository(file).use { cursors ->
+            openSqlite(file).use { db ->
+                val cursors = SqliteCursorRepository(db)
                 assertNull(cursors.get(HOME))
             }
         }
@@ -28,7 +29,8 @@ class SqliteCursorRepositoryTest {
     @Test
     fun `a cursor is kept per mailbox and replaced by the next one`() =
         runTest {
-            SqliteCursorRepository(file).use { cursors ->
+            openSqlite(file).use { db ->
+                val cursors = SqliteCursorRepository(db)
                 cursors.set(HOME, Cursor(uidValidity = 7, lastUid = 100))
                 cursors.set(WORK, Cursor(uidValidity = 3, lastUid = 5))
                 cursors.set(HOME, Cursor(uidValidity = 8, lastUid = 2))
@@ -47,16 +49,16 @@ class SqliteCursorRepositoryTest {
         runTest {
             // UIDs are unsigned 32-bit numbers, so the largest one does not fit an Int.
             val cursor = Cursor(uidValidity = 4_294_967_295, lastUid = 4_294_967_294)
-            SqliteCursorRepository(file).use { it.set(HOME, cursor) }
-            SqliteCursorRepository(file).use { assertEquals(cursor, it.get(HOME)) }
+            openSqlite(file).use { SqliteCursorRepository(it).set(HOME, cursor) }
+            openSqlite(file).use { assertEquals(cursor, SqliteCursorRepository(it).get(HOME)) }
         }
 
     @Test
     fun `the missing directory of the file is created`() =
         runTest {
             val nested = dir.resolve("data/deeper/mailscan.db")
-            SqliteCursorRepository(nested).use { it.set(HOME, Cursor(1, 1)) }
-            SqliteCursorRepository(nested).use { assertEquals(Cursor(1, 1), it.get(HOME)) }
+            openSqlite(nested).use { SqliteCursorRepository(it).set(HOME, Cursor(1, 1)) }
+            openSqlite(nested).use { assertEquals(Cursor(1, 1), SqliteCursorRepository(it).get(HOME)) }
         }
 
     @Test
@@ -67,7 +69,9 @@ class SqliteCursorRepositoryTest {
             jdbc(file) { execute("INSERT INTO state (key, value) VALUES ('INBOX:uidvalidity', '7')") }
             jdbc(file) { execute("INSERT INTO state (key, value) VALUES ('INBOX:last_uid', '99')") }
 
-            SqliteCursorRepository(file).use { cursors ->
+            openSqlite(file).use { db ->
+
+                val cursors = SqliteCursorRepository(db)
                 assertNull(cursors.get(HOME))
                 cursors.set(HOME, Cursor(uidValidity = 7, lastUid = 100))
             }

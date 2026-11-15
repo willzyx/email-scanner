@@ -39,7 +39,8 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `an email of any importance is kept, with all that is known of it`() =
         runTest {
-            SqliteAnalysisRepository(file).use { analyses ->
+            openSqlite(file).use { db ->
+                val analyses = SqliteAnalysisRepository(db)
                 analyses.save(HOME, email(1, Importance.HIGH))
                 analyses.save(HOME, email(2, Importance.MEDIUM))
                 analyses.save(HOME, email(3, Importance.LOW))
@@ -58,7 +59,8 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `an email saved a second time replaces its first record`() =
         runTest {
-            SqliteAnalysisRepository(file).use { analyses ->
+            openSqlite(file).use { db ->
+                val analyses = SqliteAnalysisRepository(db)
                 analyses.save(HOME, email(1, Importance.LOW))
                 analyses.save(HOME, email(1, Importance.HIGH, subject = "Rated again"))
             }
@@ -72,7 +74,8 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `the same UID in another mailbox, or after a renumbering, is another email`() =
         runTest {
-            SqliteAnalysisRepository(file).use { analyses ->
+            openSqlite(file).use { db ->
+                val analyses = SqliteAnalysisRepository(db)
                 analyses.save(HOME, email(1, Importance.LOW))
                 analyses.save(WORK, email(1, Importance.LOW))
                 analyses.save(HOME, email(1, Importance.LOW, uidValidity = 8))
@@ -87,7 +90,8 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `the emails of a mailbox rated in a period are read back whole, in the order they were rated`() =
         runTest {
-            SqliteAnalysisRepository(file).use { analyses ->
+            openSqlite(file).use { db ->
+                val analyses = SqliteAnalysisRepository(db)
                 // Rated one, two, three and four seconds after AT; saved out of order.
                 analyses.save(HOME, email(3, Importance.LOW))
                 analyses.save(HOME, email(1, Importance.HIGH))
@@ -106,7 +110,8 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `an email rated at the moment two periods meet is in the later one only`() =
         runTest {
-            SqliteAnalysisRepository(file).use { analyses ->
+            openSqlite(file).use { db ->
+                val analyses = SqliteAnalysisRepository(db)
                 for (uid in 1L..3L) analyses.save(HOME, email(uid, Importance.LOW))
                 val meet = AT.plusSeconds(2)
 
@@ -118,7 +123,8 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `the emails rated before a moment are deleted, of every mailbox, and counted`() =
         runTest {
-            SqliteAnalysisRepository(file).use { analyses ->
+            openSqlite(file).use { db ->
+                val analyses = SqliteAnalysisRepository(db)
                 // Rated one, two, three and four seconds after AT.
                 analyses.save(HOME, email(1, Importance.HIGH))
                 analyses.save(WORK, email(2, Importance.LOW))
@@ -136,22 +142,22 @@ class SqliteAnalysisRepositoryTest {
     @Test
     fun `the records survive closing and reopening the file`() =
         runTest {
-            SqliteAnalysisRepository(file).use { it.save(HOME, email(1, Importance.LOW)) }
-            SqliteAnalysisRepository(file).use { it.save(HOME, email(2, Importance.LOW)) }
+            openSqlite(file).use { SqliteAnalysisRepository(it).save(HOME, email(1, Importance.LOW)) }
+            openSqlite(file).use { SqliteAnalysisRepository(it).save(HOME, email(2, Importance.LOW)) }
             assertEquals(2, rows().size)
         }
 
     @Test
-    fun `the records live in one file with the cursors, each written through its own connection`() =
+    fun `the records live in one file with the cursors, both written through one connection`() =
         runTest {
-            SqliteCursorRepository(file).use { cursors ->
-                SqliteAnalysisRepository(file).use { analyses ->
-                    for (uid in 1L..3L) {
-                        analyses.save(HOME, email(uid, Importance.LOW))
-                        cursors.set(HOME, Cursor(uidValidity = 7, lastUid = uid))
-                    }
-                    assertEquals(Cursor(uidValidity = 7, lastUid = 3), cursors.get(HOME))
+            openSqlite(file).use { db ->
+                val cursors = SqliteCursorRepository(db)
+                val analyses = SqliteAnalysisRepository(db)
+                for (uid in 1L..3L) {
+                    analyses.save(HOME, email(uid, Importance.LOW))
+                    cursors.set(HOME, Cursor(uidValidity = 7, lastUid = uid))
                 }
+                assertEquals(Cursor(uidValidity = 7, lastUid = 3), cursors.get(HOME))
             }
             assertEquals(3, rows().size)
         }
