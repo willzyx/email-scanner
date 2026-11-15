@@ -85,6 +85,37 @@ class SqliteAnalysisRepositoryTest {
         }
 
     @Test
+    fun `the emails of a mailbox rated in a period are read back whole, in the order they were rated`() =
+        runTest {
+            SqliteAnalysisRepository(file).use { analyses ->
+                // Rated one, two, three and four seconds after AT; saved out of order.
+                analyses.save(HOME, email(3, Importance.LOW))
+                analyses.save(HOME, email(1, Importance.HIGH))
+                analyses.save(WORK, email(2, Importance.LOW))
+                analyses.save(HOME, email(4, Importance.MEDIUM))
+
+                assertEquals(
+                    listOf(email(1, Importance.HIGH), email(3, Importance.LOW), email(4, Importance.MEDIUM)),
+                    analyses.between(HOME, AT, AT.plusSeconds(60)),
+                )
+                assertEquals(listOf(email(2, Importance.LOW)), analyses.between(WORK, AT, AT.plusSeconds(60)))
+                assertEquals(emptyList(), analyses.between("nobody@example.com", AT, AT.plusSeconds(60)))
+            }
+        }
+
+    @Test
+    fun `an email rated at the moment two periods meet is in the later one only`() =
+        runTest {
+            SqliteAnalysisRepository(file).use { analyses ->
+                for (uid in 1L..3L) analyses.save(HOME, email(uid, Importance.LOW))
+                val meet = AT.plusSeconds(2)
+
+                assertEquals(listOf(1L), analyses.between(HOME, AT, meet).map { it.uid })
+                assertEquals(listOf(2L, 3L), analyses.between(HOME, meet, AT.plusSeconds(60)).map { it.uid })
+            }
+        }
+
+    @Test
     fun `the emails rated before a moment are deleted, of every mailbox, and counted`() =
         runTest {
             SqliteAnalysisRepository(file).use { analyses ->

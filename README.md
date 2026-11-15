@@ -1,8 +1,8 @@
 # mailscan
 
-Reads your inboxes, one or several (Gmail unless told otherwise); a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away, each mailbox to a chat of its own; ads, newsletters and notifications are rated and skipped, nothing is sent for them. Every rating, of a skipped email too, is kept in a local database for a week. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary, to your Telegram.
+Reads your inboxes, one or several (Gmail unless told otherwise); a local model (`gemma4:e4b` in Ollama) rates how important each email is and writes a short summary. Important (🔴) and regular (🟡) emails go to Telegram right away, each mailbox to a chat of its own; ads, newsletters and notifications are rated and skipped, nothing is sent for them. Twice a day each chat also gets a digest of its mailbox: the model retells everything that came since the digest before, the skipped emails included. Every rating, of a skipped email too, is kept in a local database for a week. No cloud LLMs: emails never leave the machine, and the only thing that goes out is the sender, the subject and the summary of an email, and the digests, to your Telegram.
 
-The summaries are in Russian by default; change the language with `SUMMARY_LANGUAGE`.
+The summaries and the digests are in Russian by default; change the language with `SUMMARY_LANGUAGE`.
 
 ## How it works
 
@@ -13,6 +13,8 @@ The summaries are in Russian by default; change the language with `SUMMARY_LANGU
 - **`mailscan`**: the scanner with its own schedule: it checks the mailboxes one after another, waits a minute (`SCAN_INTERVAL_MIN`) and checks again.
 
 A mailbox is opened read-only: emails are not marked as read, moved or deleted. Only the inbox (`INBOX`) is scanned; the archive and other Gmail labels are not read.
+
+A digest of each mailbox goes out at 09:00 and 21:00 (`DIGEST_TIMES`, by the clock of `TZ`), once the new emails of the mailbox are handled. It covers the emails rated since the digest before: a heading with the mailbox, the period and how many emails there were of each importance, and below it the model's retelling, most important first, ads and newsletters only counted. The model writes it from the senders, subjects and summaries in the database, not from the emails again; when there are too many for one request, it retells them in portions and then joins the parts. A period without emails gives no message. While a digest is being written, which takes minutes, no email is rated. If the model or Telegram fails, the digest is made anew in a minute.
 
 If Telegram is unreachable when an important email comes in, the scanner stops at that email and retries in a minute. A mailbox that fails, with a wrong password for one, does not hold up the others. If Gmail renumbers an inbox (rare), its last 24 hours are re-read, and an important email from that window may arrive a second time.
 
@@ -49,7 +51,7 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Fill in `TELEGRAM_BOT_TOKEN`; the scanner does not start without it. The other variables are described in `.env.example`; you don't have to change them. `SUMMARY_LANGUAGE` sets the language the model writes summaries in (`Russian` by default).
+Fill in `TELEGRAM_BOT_TOKEN`; the scanner does not start without it. The other variables are described in `.env.example`; you don't have to change them. `SUMMARY_LANGUAGE` sets the language the model writes summaries and digests in (`Russian` by default), and `DIGEST_TIMES` the times of day the digests go out (`09:00,21:00` by default).
 
 ### 4. The `mailboxes.yaml` file
 
@@ -85,7 +87,7 @@ docker compose logs -f mailscan
 
 The first start builds the image and downloads the model, which takes a while. The log then says `mailscan is up`, and a line per email follows as the mail comes in.
 
-A mailbox scanned for the first time gives its emails from the last 24 hours. A mistake in `mailboxes.yaml` stops the scanner at the start, with a message that names the file. A wrong bot token or chat id shows up in the log when the first email is to be sent: `Telegram sendMessage: 400 Bad Request: chat not found`.
+A mailbox scanned for the first time gives its emails from the last 24 hours and, once they are handled, its first digest, without waiting for the time of one. A mistake in `mailboxes.yaml` stops the scanner at the start, with a message that names the file. A wrong bot token or chat id shows up in the log when the first email is to be sent: `Telegram sendMessage: 400 Bad Request: chat not found`.
 
 ## Maintenance
 
@@ -98,16 +100,16 @@ A mailbox scanned for the first time gives its emails from the last 24 hours. A 
 | Reset the state (the model stays) | `docker compose down && docker volume rm mailscan-data` |
 | Remove everything, including the model | `docker compose down -v` |
 
-A state reset also deletes the records of the emails rated so far. After it the scanner starts as on the first run: emails from the last 24 hours of every mailbox, and the important ones among them arrive again.
+A state reset also deletes the records of the emails rated so far. After it the scanner starts as on the first run: emails from the last 24 hours of every mailbox, the important ones among them arrive again, and so does a digest.
 
 ## Where the data lives
 
 One file from the server's disk is mounted into the scanner's container, read-only: `mailboxes.yaml`. The rest are two Docker volumes:
 
 - **`mailscan-ollama`**: the model.
-- **`mailscan-data`**: a small SQLite database with two tables: where the scan of each mailbox stopped, and a record of every email the model has rated, the skipped ones included: the sender, the subject, the importance, the summary and the model's reason for it. A record is deleted a week after the email was rated.
+- **`mailscan-data`**: a small SQLite database with three tables: where the scan of each mailbox stopped, when its last digest was made, and a record of every email the model has rated, the skipped ones included: the sender, the subject, the importance, the summary and the model's reason for it. A record is deleted a week after the email was rated. The digests themselves are not stored.
 
-Email bodies are never stored: they exist only in memory while being processed. The scanner container's file system is read-only; it can write only to its own volume. The logs contain the addresses of your mailboxes, UIDs, importance levels and errors, and nothing from the emails themselves: no senders, subjects or text.
+Email bodies are never stored: they exist only in memory while being processed. The scanner container's file system is read-only; it can write only to its own volume. The logs contain the addresses of your mailboxes, UIDs, importance levels, how many emails a digest covered and errors, and nothing from the emails themselves: no senders, subjects or text.
 
 Secrets live in `.env` (the bot token) and in `mailboxes.yaml` (the passwords of the mailboxes). Compose passes the former to the container as environment variables, which `docker inspect` can show, and mounts the latter into it: access to Docker on the server equals access to the mailboxes.
 
@@ -131,10 +133,10 @@ The image build runs `./gradlew build` too, so an image whose tests fail is neve
 | `config` | the environment variables and the list of mailboxes |
 | `imap` | the read-only mailbox: which emails are new, and their content |
 | `mail` | reading an email: sender, subject and the body as text (HTML without its hidden parts) |
-| `llm` | the prompt, the Ollama client and the reading of the model's answer |
-| `telegram` | the text of a message about an email and the Bot API client |
-| `db` | where the scan stopped and what the model said of each email, in SQLite |
-| `scan` | one pass over the new emails of a mailbox and the loop that goes round the mailboxes |
+| `llm` | the prompts, the Ollama client, the reading of the model's answer about an email and the writing of a digest |
+| `telegram` | the text of a message about an email and of a digest, and the Bot API client |
+| `db` | where the scan stopped, what the model said of each email and when the last digest was made, in SQLite |
+| `scan` | one pass over the new emails of a mailbox, the digest of a mailbox and the loop that goes round the mailboxes |
 | `http` | JSON over HTTP for the Ollama and Telegram clients |
 
 The test emails in `src/test/resources` are made up: 20 home ones and 20 work ones, in 17 languages.

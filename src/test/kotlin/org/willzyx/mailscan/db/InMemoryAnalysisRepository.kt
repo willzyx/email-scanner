@@ -14,6 +14,9 @@ class InMemoryAnalysisRepository : AnalysisRepository {
         emails[Triple(account, email.uidValidity, email.uid)] = email
     }
 
+    override suspend fun between(account: String, from: Instant, until: Instant): List<AnalyzedEmail> =
+        of(account).filter { it.analyzedAt >= from && it.analyzedAt < until }.sortedBy { it.analyzedAt }
+
     override suspend fun deleteBefore(time: Instant): Int {
         check(!down) { "the database is down" }
         val old = emails.filterValues { it.analyzedAt < time }.keys

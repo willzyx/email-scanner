@@ -2,12 +2,15 @@ package org.willzyx.mailscan.db.impl
 
 import java.nio.file.Path
 import java.sql.Connection
+import java.sql.ResultSet
 import java.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.willzyx.mailscan.db.AnalysisRepository
 import org.willzyx.mailscan.db.AnalyzedEmail
+import org.willzyx.mailscan.llm.Analysis
+import org.willzyx.mailscan.llm.Importance
 
 /**
  * [AnalysisRepository] in the SQLite file at [path], one row of `email_analysis` per email. The file,
@@ -70,6 +73,30 @@ class SqliteAnalysisRepository(
         }
     }
 
+    override suspend fun between(account: String, from: Instant, until: Instant): List<AnalyzedEmail> =
+        withContext(dispatcher) {
+            connection
+                .prepareStatement(
+                    """
+                    select uid_validity, uid, analyzed_at, sender, subject,
+                           importance, summary, reason, action_required
+                    from email_analysis
+                    where account = ? and analyzed_at >= ? and analyzed_at < ?
+                    order by analyzed_at, uid_validity, uid
+                    """.trimIndent(),
+                )
+                .use { statement ->
+                    statement.setString(1, account)
+                    statement.setLong(2, from.epochSecond)
+                    statement.setLong(3, until.epochSecond)
+                    statement.executeQuery().use { rows ->
+                        buildList {
+                            while (rows.next()) add(email(rows))
+                        }
+                    }
+                }
+        }
+
     override suspend fun deleteBefore(time: Instant): Int =
         withContext(dispatcher) {
             connection.prepareStatement("delete from email_analysis where analyzed_at < ?").use { statement ->
@@ -80,3 +107,19 @@ class SqliteAnalysisRepository(
 
     override fun close() = connection.close()
 }
+
+/** The email in the current row of [rows], its columns in the order [SqliteAnalysisRepository.between] selects them. */
+private fun email(rows: ResultSet): AnalyzedEmail =
+    AnalyzedEmail(
+        uidValidity = rows.getLong(1),
+        uid = rows.getLong(2),
+        analyzedAt = Instant.ofEpochSecond(rows.getLong(3)),
+        sender = rows.getString(4),
+        subject = rows.getString(5),
+        analysis = Analysis(
+            importance = Importance.valueOf(rows.getString(6)),
+            summary = rows.getString(7),
+            reason = rows.getString(8),
+            actionRequired = rows.getBoolean(9),
+        ),
+    )

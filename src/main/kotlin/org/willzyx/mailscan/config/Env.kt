@@ -2,7 +2,10 @@ package org.willzyx.mailscan.config
 
 import java.time.DateTimeException
 import java.time.Duration
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -21,13 +24,15 @@ data class Env(
     /** The language the model writes summaries in: any language name it understands. */
     val summaryLanguage: String,
     val scanInterval: Duration,
-    /** The zone "today" is taken in for the first scan's lookback. */
+    /** The zone "today" is taken in for the first scan's lookback, and the one [digestTimes] are in. */
     val zone: ZoneId,
+    /** The times of day a digest of each mailbox goes out, earliest first. */
+    val digestTimes: List<LocalTime>,
 ) {
     // The bot token stays out of logs and stack traces.
     override fun toString(): String =
         "Env(ollamaUrl=$ollamaUrl, ollamaModel=$ollamaModel, summaryLanguage=$summaryLanguage, " +
-            "scanInterval=$scanInterval, zone=$zone)"
+            "scanInterval=$scanInterval, zone=$zone, digestTimes=$digestTimes)"
 
     companion object {
         fun load(environment: Map<String, String> = System.getenv()): Env {
@@ -62,7 +67,26 @@ data class Env(
                 summaryLanguage = get("SUMMARY_LANGUAGE", "Russian"),
                 scanInterval = Duration.ofMinutes(minutes.toLong()),
                 zone = zone,
+                digestTimes = digestTimes(get("DIGEST_TIMES", "09:00,21:00")),
             )
         }
+
+        /** The times of day in [text], which lists them as `09:00,21:00`: 24-hour, separated by commas. */
+        private fun digestTimes(text: String): List<LocalTime> {
+            val times =
+                text.split(",").map { part ->
+                    try {
+                        LocalTime.parse(part.trim(), TIME_OF_DAY)
+                    } catch (e: DateTimeParseException) {
+                        throw ConfigException("DIGEST_TIMES: expected times like 09:00,21:00, got '$text'", e)
+                    }
+                }
+            if (times.distinct().size < times.size) {
+                throw ConfigException("DIGEST_TIMES: the same time is listed twice in '$text'")
+            }
+            return times.sorted()
+        }
+
+        private val TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

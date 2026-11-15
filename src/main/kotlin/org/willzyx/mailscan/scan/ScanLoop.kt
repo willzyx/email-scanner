@@ -12,28 +12,30 @@ import org.willzyx.mailscan.llm.LlmUnavailableException
 import org.willzyx.mailscan.telegram.TelegramException
 
 /**
- * Scans the mailboxes of [scanners] one after another, round after round: one email is in work at
- * a time, however many mailboxes there are. Each round starts with deleting from [analyses] the
- * emails rated more than a week ago by [clock].
+ * Scans [mailboxes] one after another, round after round: one email is in work at a time, however
+ * many mailboxes there are. A mailbox is the scanner and the digester of one account; once its new
+ * emails are all handled, its digest goes out if the time for one has come. Each round starts with
+ * deleting from [analyses] the emails rated more than a week ago by [clock].
  */
 class ScanLoop(
-    private val scanners: List<Scanner>,
+    private val mailboxes: List<Pair<Scanner, Digester>>,
     private val analyses: AnalysisRepository,
     private val clock: Clock,
 ) {
     /**
      * Makes rounds until the coroutine is cancelled: the next one at once while some mailbox has a
-     * backlog, and after a pause of [interval] when none has. A pass that fails is logged, whatever
-     * went wrong, and the round goes on to the next mailbox: one bad pass must not stop the scanner.
-     * The round after it comes in a minute. The same goes for a deletion that fails.
+     * backlog, and after a pause of [interval] when none has. A pass or a digest that fails is logged,
+     * whatever went wrong, and the round goes on to the next mailbox: one bad pass must not stop the
+     * scanner. The round after it comes in a minute. The same goes for a deletion that fails.
      */
     suspend fun run(interval: Duration): Nothing {
         while (true) {
             var backlog = false
             var failed = !deleteOldEmails()
-            for (scanner in scanners) {
+            for ((scanner, digester) in mailboxes) {
                 try {
-                    if (scanner.scan()) backlog = true
+                    // A digest waits for the backlog to be worked off, so as to cover every email that has come.
+                    if (scanner.scan()) backlog = true else digester.sendIfDue()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

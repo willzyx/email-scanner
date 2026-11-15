@@ -1,6 +1,7 @@
 package org.willzyx.mailscan.config
 
 import java.time.Duration
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,6 +23,7 @@ class EnvTest {
                 summaryLanguage = "Russian",
                 scanInterval = Duration.ofMinutes(1),
                 zone = ZoneId.of("Asia/Nicosia"),
+                digestTimes = listOf(LocalTime.of(9, 0), LocalTime.of(21, 0)),
             ),
             Env.load(token),
         )
@@ -38,6 +40,7 @@ class EnvTest {
                         "SUMMARY_LANGUAGE" to "Greek",
                         "SCAN_INTERVAL_MIN" to "10",
                         "TZ" to "Europe/Berlin",
+                        "DIGEST_TIMES" to "07:30,13:00,19:30",
                     ),
             )
         assertEquals(
@@ -48,6 +51,7 @@ class EnvTest {
                 summaryLanguage = "Greek",
                 scanInterval = Duration.ofMinutes(10),
                 zone = ZoneId.of("Europe/Berlin"),
+                digestTimes = listOf(LocalTime.of(7, 30), LocalTime.of(13, 0), LocalTime.of(19, 30)),
             ),
             env,
         )
@@ -102,6 +106,27 @@ class EnvTest {
             val failure = assertFailsWith<ConfigException>(bad) { Env.load(token + ("TZ" to bad)) }
             assertEquals("TZ: unknown time zone '$bad'", failure.message)
         }
+    }
+
+    @Test
+    fun `the digest times are put in order, spaces around them dropped`() {
+        val env = Env.load(token + ("DIGEST_TIMES" to " 20:00 , 08:00 "))
+        assertEquals(listOf(LocalTime.of(8, 0), LocalTime.of(20, 0)), env.digestTimes)
+    }
+
+    @Test
+    fun `a digest time that cannot be read is a ConfigException naming the variable and the value`() {
+        for (bad in listOf("9:00", "09:00:30", "25:00", "09.00", "morning", "09:00,", "09:00;21:00")) {
+            val failure = assertFailsWith<ConfigException>(bad) { Env.load(token + ("DIGEST_TIMES" to bad)) }
+            assertEquals("DIGEST_TIMES: expected times like 09:00,21:00, got '$bad'", failure.message)
+        }
+    }
+
+    @Test
+    fun `a digest time listed twice is a ConfigException naming the variable and the value`() {
+        val failure =
+            assertFailsWith<ConfigException> { Env.load(token + ("DIGEST_TIMES" to "09:00,21:00,09:00")) }
+        assertEquals("DIGEST_TIMES: the same time is listed twice in '09:00,21:00,09:00'", failure.message)
     }
 
     @Test

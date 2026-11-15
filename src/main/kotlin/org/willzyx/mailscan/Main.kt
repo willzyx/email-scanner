@@ -11,11 +11,16 @@ import org.willzyx.mailscan.config.Env
 import org.willzyx.mailscan.config.MailboxConfig
 import org.willzyx.mailscan.db.AnalysisRepository
 import org.willzyx.mailscan.db.CursorRepository
+import org.willzyx.mailscan.db.DigestRepository
 import org.willzyx.mailscan.db.impl.SqliteAnalysisRepository
 import org.willzyx.mailscan.db.impl.SqliteCursorRepository
+import org.willzyx.mailscan.db.impl.SqliteDigestRepository
 import org.willzyx.mailscan.http.impl.OkHttpJson
 import org.willzyx.mailscan.imap.impl.ImapMailbox
 import org.willzyx.mailscan.llm.impl.OllamaAnalyzer
+import org.willzyx.mailscan.llm.impl.OllamaChat
+import org.willzyx.mailscan.llm.impl.OllamaDigestWriter
+import org.willzyx.mailscan.scan.Digester
 import org.willzyx.mailscan.scan.ScanLoop
 import org.willzyx.mailscan.scan.Scanner
 import org.willzyx.mailscan.telegram.impl.HttpTelegramClient
@@ -28,7 +33,7 @@ private val DATABASE: Path = Path.of("data", "mailscan.db")
 /** Relative to the working directory as well: compose mounts the file at `/app/mailboxes.yaml`. */
 private val MAILBOXES: Path = Path.of("mailboxes.yaml")
 
-/** The first email after an idle stretch also waits for the model to be loaded, which takes minutes on a CPU. */
+/** The first request after an idle stretch also waits for the model to be loaded, which takes minutes on a CPU. */
 private val OLLAMA_TIMEOUT = Duration.ofMinutes(10)
 private val TELEGRAM_TIMEOUT = Duration.ofSeconds(30)
 
@@ -44,9 +49,16 @@ fun main() {
     try {
         SqliteCursorRepository(DATABASE).use { cursors ->
             SqliteAnalysisRepository(DATABASE).use { analyses ->
-                val users = mailboxes.joinToString { it.user }
-                log.info("mailscan is up: {} every {} min ({})", users, env.scanInterval.toMinutes(), env.zone)
-                runBlocking { scanLoop(env, mailboxes, cursors, analyses).run(env.scanInterval) }
+                SqliteDigestRepository(DATABASE).use { digests ->
+                    log.info(
+                        "mailscan is up: {} every {} min, digests at {} ({})",
+                        mailboxes.joinToString { it.user },
+                        env.scanInterval.toMinutes(),
+                        env.digestTimes.joinToString(),
+                        env.zone,
+                    )
+                    runBlocking { scanLoop(env, mailboxes, cursors, analyses, digests).run(env.scanInterval) }
+                }
             }
         }
     } catch (e: Exception) {
@@ -56,30 +68,27 @@ fun main() {
 }
 
 /**
- * A scanner per mailbox, each reporting to the chat of its mailbox; the model, the bot and the database
- * are the same for all.
+ * A scanner and a digester per mailbox, both reporting to the chat of their mailbox; the model, the bot
+ * and the database are the same for all.
  */
 private fun scanLoop(
     env: Env,
     mailboxes: List<MailboxConfig>,
     cursors: CursorRepository,
     analyses: AnalysisRepository,
+    digests: DigestRepository,
 ): ScanLoop {
-    val analyzer =
-        OllamaAnalyzer(env.ollamaUrl, env.ollamaModel, env.summaryLanguage, OkHttpJson.create(OLLAMA_TIMEOUT))
-    val telegram = OkHttpJson.create(TELEGRAM_TIMEOUT)
+    val chat = OllamaChat(env.ollamaUrl, env.ollamaModel, OkHttpJson.create(OLLAMA_TIMEOUT))
+    val analyzer = OllamaAnalyzer(chat, env.summaryLanguage)
+    val writer = OllamaDigestWriter(chat, env.summaryLanguage)
+    val http = OkHttpJson.create(TELEGRAM_TIMEOUT)
     val clock = Clock.system(env.zone)
     return ScanLoop(
         mailboxes.map { mailbox ->
-            Scanner(
-                account = mailbox.user,
-                mailbox = ImapMailbox(mailbox.host, mailbox.user, mailbox.password),
-                cursors = cursors,
-                analyses = analyses,
-                analyzer = analyzer,
-                telegram = HttpTelegramClient(telegram, env.telegramBotToken, mailbox.chatId),
-                clock = clock,
-            )
+            val imap = ImapMailbox(mailbox.host, mailbox.user, mailbox.password)
+            val telegram = HttpTelegramClient(http, env.telegramBotToken, mailbox.chatId)
+            Scanner(mailbox.user, imap, cursors, analyses, analyzer, telegram, clock) to
+                Digester(mailbox.user, analyses, digests, writer, telegram, clock, env.digestTimes)
         },
         analyses,
         clock,

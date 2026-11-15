@@ -23,6 +23,12 @@ interface AnalysisRepository {
     /** Keeps [email] of the mailbox of [account]. An email rated a second time replaces its first record. */
     suspend fun save(account: String, email: AnalyzedEmail)
 
+    /**
+     * The emails of the mailbox of [account] rated from [from] on and before [until], in the order they
+     * were rated. Two periods that meet at a moment share no email, and miss none.
+     */
+    suspend fun between(account: String, from: Instant, until: Instant): List<AnalyzedEmail>
+
     /** Deletes the emails rated before [time], of every mailbox, and returns how many there were. */
     suspend fun deleteBefore(time: Instant): Int
 }

@@ -7,17 +7,13 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.putJsonObject
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.willzyx.mailscan.http.FakeJsonHttp
-import org.willzyx.mailscan.http.HttpStatusException
 import org.willzyx.mailscan.llm.ANSWER_SCHEMA
 import org.willzyx.mailscan.llm.Analysis
 import org.willzyx.mailscan.llm.Importance
@@ -37,17 +33,12 @@ private const val ANSWER =
         "reason": "An email from a person, no reply needed", "action_required": false}"""
 
 class OllamaAnalyzerTest {
-    /** Ollama answering every chat request with the model saying [content]. */
-    private fun ollama(content: String = ANSWER) =
-        FakeJsonHttp { _, _ -> buildJsonObject { putJsonObject("message") { put("content", JsonPrimitive(content)) } } }
-
-    private fun analyzer(http: FakeJsonHttp, baseUrl: String = "http://ollama:11434", language: String = "Russian") =
-        OllamaAnalyzer(baseUrl.toHttpUrl(), "gemma4:e4b", language, http)
+    private fun analyzer(http: FakeJsonHttp, language: String = "Russian") = OllamaAnalyzer(chat(http), language)
 
     @Test
     fun `asks the model about the email and reads its answer`() =
         runTest {
-            val http = ollama()
+            val http = ollama(ANSWER)
 
             val analysis = analyzer(http).analyze(MAIL)
 
@@ -60,19 +51,8 @@ class OllamaAnalyzerTest {
                 ),
                 analysis,
             )
-            val call = http.calls.single()
-            assertEquals("http://ollama:11434/api/chat", call.url.toString())
-            val request = call.body.jsonObject
-            assertEquals(
-                setOf("model", "stream", "format", "think", "keep_alive", "options", "messages"),
-                request.keys,
-            )
-            assertEquals(JsonPrimitive("gemma4:e4b"), request["model"])
-            assertEquals(JsonPrimitive(false), request["stream"])
+            val request = http.calls.single().body.jsonObject
             assertEquals(ANSWER_SCHEMA, request["format"])
-            assertEquals(JsonPrimitive(false), request["think"])
-            assertEquals(JsonPrimitive("1m"), request["keep_alive"])
-            assertEquals(Json.parseToJsonElement("""{"temperature": 0, "num_ctx": 4096}"""), request["options"])
 
             val (system, user) = request.getValue("messages").jsonArray.map { it.jsonObject }
             assertEquals(JsonPrimitive("system"), system["role"])
@@ -88,25 +68,11 @@ class OllamaAnalyzerTest {
     @Test
     fun `the language of the summaries goes into the system prompt`() =
         runTest {
-            val http = ollama()
+            val http = ollama(ANSWER)
             analyzer(http, language = "Greek").analyze(MAIL)
             val system = http.calls.single().body.jsonObject.getValue("messages").jsonArray.first().jsonObject
             assertTrue("in Greek" in system.text("content"))
             assertFalse("in Russian" in system.text("content"))
-        }
-
-    @Test
-    fun `the address of Ollama may end with a slash or have a path`() =
-        runTest {
-            for ((base, expected) in listOf(
-                "http://ollama:11434/" to "http://ollama:11434/api/chat",
-                "https://host.example/ollama/" to "https://host.example/ollama/api/chat",
-                "https://host.example/ollama" to "https://host.example/ollama/api/chat",
-            )) {
-                val http = ollama()
-                analyzer(http, baseUrl = base).analyze(MAIL)
-                assertEquals(expected, http.calls.single().url.toString())
-            }
         }
 
     @Test
@@ -119,22 +85,17 @@ class OllamaAnalyzerTest {
                     reason = "Could not parse the model's answer",
                     actionRequired = false,
                 )
-            assertEquals(expected, analyzer(ollama(content = "not json")).analyze(MAIL))
-            assertEquals(expected, analyzer(ollama(content = """["a", "list"]""")).analyze(MAIL))
+            assertEquals(expected, analyzer(ollama("not json")).analyze(MAIL))
+            assertEquals(expected, analyzer(ollama("""["a", "list"]""")).analyze(MAIL))
             // No message in the response at all.
             assertEquals(expected, analyzer(FakeJsonHttp { _, _ -> buildJsonObject { } }).analyze(MAIL))
         }
 
     @Test
-    fun `Ollama that cannot be reached or refuses is an LlmUnavailableException`() =
+    fun `Ollama that is unavailable is an LlmUnavailableException, the email left for the next pass`() =
         runTest {
             val down = FakeJsonHttp { _, _ -> throw IOException("Failed to connect to ollama:11434") }
-            val failure = assertFailsWith<LlmUnavailableException> { analyzer(down).analyze(MAIL) }
-            assertEquals("Ollama is unavailable: Failed to connect to ollama:11434", failure.message)
-
-            val refusing =
-                FakeJsonHttp { _, _ -> throw HttpStatusException("Ollama /api/chat", 404, "model not found") }
-            assertFailsWith<LlmUnavailableException> { analyzer(refusing).analyze(MAIL) }
+            assertFailsWith<LlmUnavailableException> { analyzer(down).analyze(MAIL) }
         }
 }
 

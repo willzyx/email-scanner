@@ -32,7 +32,7 @@ fun emailText(mail: ParsedEmail, analysis: Analysis): String {
  * [text] made safe to put into a Telegram HTML message: it comes from an email or from the model,
  * so `<` in it must not start a tag. Text over [maxChars] is cut to that length, the last character being "…".
  */
-private fun escape(text: String, maxChars: Int): String {
+internal fun escape(text: String, maxChars: Int): String {
     val cut = if (text.length > maxChars) text.take(maxChars - 1) + "…" else text
     return cut.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 }
