@@ -25,7 +25,7 @@ If Telegram is unreachable when an important email comes in, the scanner stops a
 - ~16 GB of disk: the Ollama image is 8.5 GB and the model 6.6 GB.
 - Internet: to build the image, on the first start (to download the model) and while running (Gmail, Telegram).
 
-Speed depends on the CPU: a laptop with a Core Ultra 7 155U takes ~36 s per email. The scanner itself is a JVM process held to 256 MB; it takes about 70 MB.
+Speed depends on the CPU: a laptop with a Core Ultra 7 155U takes ~36 s per email. The scanner itself is a JVM process held to 256 MB; it takes about 70 MB. The JVM flags that keep it small are `applicationDefaultJvmArgs` in [build.gradle.kts](build.gradle.kts); `JAVA_OPTS` overrides them.
 
 ## Setup
 

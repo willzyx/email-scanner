@@ -24,15 +24,11 @@ COPY --from=build /src/build/install/mailscan /opt/mailscan
 WORKDIR /app
 USER mailscan
 
-# Memory, for the 256 MB limit of the container:
-#   UseSerialGC           one collector thread and none of G1's bookkeeping; a heap this small is collected in milliseconds
-#   Xmx128m               a fixed ceiling, so the heap does not grow towards the limit before it is collected
-#   TieredStopAtLevel=1   the quick C1 compiler only: less memory for compiled code and for the compiler itself;
-#                         top speed does not matter next to the half a minute the model takes per email
+# The JVM flags that hold the scanner to the 256 MB limit are in build.gradle.kts. These belong to the container:
 #   -UsePerfData          no statistics file in /tmp, which the read-only root file system could not take
 #   MALLOC_ARENA_MAX=2    glibc otherwise gives every thread a malloc arena of its own
 # The root file system is read-only, so the SQLite driver unpacks its native library into the data volume.
-ENV JAVA_OPTS="-XX:+UseSerialGC -Xmx128m -XX:TieredStopAtLevel=1 -XX:-UsePerfData -Dorg.sqlite.tmpdir=/app/data" \
+ENV JAVA_OPTS="-XX:-UsePerfData -Dorg.sqlite.tmpdir=/app/data" \
     MALLOC_ARENA_MAX=2
 
 ENTRYPOINT ["/opt/mailscan/bin/mailscan"]

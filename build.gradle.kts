@@ -59,6 +59,23 @@ tasks.check {
 
 application {
     mainClass = "org.willzyx.mailscan.MainKt"
+    // Memory, for the 256 MB limit of the container. These go into the start script, so they apply
+    // with and without Docker; JAVA_OPTS overrides them.
+    applicationDefaultJvmArgs =
+        listOf(
+            // One collector thread and none of G1's bookkeeping; a heap this small is collected in milliseconds.
+            "-XX:+UseSerialGC",
+            // A fixed ceiling, so the heap does not grow towards the limit before it is collected.
+            "-Xmx128m",
+            // If the heap runs out anyway, the process exits and Docker restarts it, instead of running on half broken.
+            "-XX:+ExitOnOutOfMemoryError",
+            // The quick C1 compiler only: less memory for compiled code and for the compiler itself;
+            // top speed does not matter next to the half a minute the model takes per email.
+            "-XX:TieredStopAtLevel=1",
+            "-XX:ReservedCodeCacheSize=32m",
+            // Thread pools (Dispatchers.Default, the JIT, the common pool) do not grow with the host's core count.
+            "-XX:ActiveProcessorCount=2",
+        )
 }
 
 tasks.test {
