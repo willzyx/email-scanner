@@ -11,7 +11,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -89,6 +92,24 @@ class OkHttpJsonTest {
             val gone = url("/api/echo")
             server.stop(0)
             assertFailsWith<IOException> { http.post(gone, request, "Echo") }
+        }
+
+    @Test
+    fun `a connection idle for longer than the keep-alive is not used again`() =
+        // Not runTest: the pause has to be a real one for OkHttp to close the idle connection.
+        runBlocking {
+            // The port the request came from tells one connection from another.
+            val ports = mutableListOf<Int>()
+            answer("/api/echo", 200, "{}") { exchange -> ports += exchange.remoteAddress.port }
+            val brief = OkHttpJson.create(Duration.ofSeconds(5), keepAlive = Duration.ofMillis(200))
+
+            brief.post(url("/api/echo"), request, "Echo")
+            brief.post(url("/api/echo"), request, "Echo")
+            delay(1_000)
+            brief.post(url("/api/echo"), request, "Echo")
+
+            assertEquals(ports[0], ports[1], "the second request, sent at once, reuses the connection")
+            assertNotEquals(ports[1], ports[2], "the third request, sent after the pause, opens a new one")
         }
 
     @Test
